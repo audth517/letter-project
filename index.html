@@ -5,7 +5,6 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, intial-scale=1" />
 <title> Inception </title>
-</head>
 <body style="margin:0; height:100vh; background:linear-gradient(180deg, #f1e9e2, #d2cbc6); color:#403d3c; font-family: 'Courier New', monospace; position:relative;">
 
 	<textarea style="
@@ -56,40 +55,47 @@
 		backdrop-filter:blur(4px);
 	"></div>
 
-	#outputBox{
+	<div style="
+		position:absolute;
+		right:12px; top:12px
+		min-width:220px; max-width: 38vw;
+		color: #f1e9e2;
+		padding:8px 10px;
+		border-radius:8px
+		font-size:14px;
+		box-shadow:0 6px 30px rgba(35, 31, 32, 0.4);
+	"></div>
+
+	<div style="
 		position:absolute;
 		right:12px;
-		top:12px;
-		min-width: 220px;
-		max-width:38vw;
-		color: #0b1220;
-		background:#f8fafc;
-		padding:8px 10px;
-		border-radius: 8px;
-		font-size: 14px;
-		box-shadow: 0 6px 30px rgba(2, 6, 23, 0.45);
-	}
-
-	#gravity-indicator{
-		position:absolute;right:12px; bottom:12px;
+		bottom:12px;
 		background:rgba(255, 255, 255, 0.06);
-		color: #fff;
+		color:#fff;
 		padding:8px 10px;
-		border-radius: 8px;
+		border-radius:8px;
 		font-size:13px;
 		width:140px;
 		text-align:center;
-	}
+	">Gravity Direction</div>
 
-	.pulse{
-		animation: pulse 520ms ease-out;
-	}
-	@keyframes pulse{
-		0% {box-shadow: 0 0 0 0 rgba(96, 165, 250, 0.6);}
-		70% {box-shadow: 0 0 0 18px rgba(96, 165, 250, 0.0);}
-		100% {box-shadow: none;}
-	}
-</style>
+	<div style="
+		width:50px; height:50px;
+		border-radius:50%;
+		background:#50a5fa;
+		box-shadow:0 0 0 0 rgba(96, 165, 250, 0.6);
+		animation:pulse 520ms ease-out;
+		animation-fill-mode:forwards;
+	"></div>
+
+	<style>
+		@keyframes pulse {
+			0% {box-shadow: 0 0 0 0 rgba(96, 165, 250, 0.6);}
+			70% {box-shadow: 0 0 0 18px rgba(96, 165, 250, 0);}
+			100% {box-shadow: none;}
+		}
+	</style>
+</body>
 </head>
 <body>
 	<div id="stage" tabindex="0">
