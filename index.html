@@ -104,7 +104,7 @@
       if (gravity === 'down' && rect.bottom < window.innerHeight - step) {
         el.style.top = rect.top + step + 'px';
       } else if (gravity === 'up' && rect.top > 40) {
-        el.style.top = Math.max(40, el.offsetTop - step) + 'px';
+        el.style.top = rect.top - step + 'px';
       } else if (gravity === 'left' && rect.left > 0) {
         el.style.left = rect.left - step + 'px';
       } else if (gravity === 'right' && rect.right < window.innerWidth) {
