@@ -1,52 +1,60 @@
 <!DOCTYPE html>
 
-<html lang="ko">
+<html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, intial-scale=1" />
 <title> Inception </title>
-<style>
-	html, body{height:100%;margin:0;font-family:Inter, system-ui, Courier New;}
+</head>
+<body style="margin:0; height:100vh; background:linear-gradient(180deg, #f1e9e2, #d2cbc6); color:#403d3c; font-family: 'Courier New', monospace; position:relative;">
 
-	#stage{
-		position:relative;
-		width:100%;
-		height:100vh;
-		overflow:hidden;
-		background:linear-gradient(180deg, #0f17a, #0b1220);
-		color:#fff;
-	}
+	<textarea style="
+		position: absolute;
+		top:0; right:0; bottom:0; left:0;
+		outline:none;
+		caret-color:rgba(64, 61, 60, 0.6);
+		font-size:24px;
+		padding:20px;
+		color:#403d3c;
+		border:none;
+		resize:none;
+	" placeholder="type here">
+	</textarea>
 
-	#caret-area{
-		position:absolute;
-		inset:0;
-		outline;none;
-		caret-color:rgba(255, 255, 255, 0.6);
-	}
-
-	.glyph{
-		position:absolute;
-		font-size:15px;
-		line-height:1;
-		pointer-event:none;
+	<div style="
+		position:absolue;
+		top:30px; left:100px; font-size:24px; line-height:1;
+		pointer-events:none;
 		user-select:none;
-		transform-origin: center center;
+		transform-origin:center center;
 		transition:filter 200ms;
-		text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+		text-shadow:0 2px 8px rgba(0, 0, 0, 0.4);
 		will-change:transform;
-	}
+	">A</div>
 
-	#hud{
+	<div style="
+		position:absolue;
+		top:100px; left:200px;
+		font-size:24px;
+		line-height:1;
+		pointer-events:none;
+		user-select:none;
+		transform-origin:center center;
+		transition:filter 200ms;
+		text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+		will-change:transform;
+	">B</div>
+
+	<div style="
 		position:absolute;
-		left:12px;
-		top:12px;
-		color:#cbd5e1;
+		left:12px; top:12px;
+		color:#f1e9e2;
 		font-size:13px;
-		backgound:rgba(2, 6, 23, 0.5);
+		background:rgba(35, 31, 32, 0.5);
 		padding:8px 10px;
 		border-radius:8px;
-		backdrop-filter: blur(4px);	
-	}
+		backdrop-filter:blur(4px);
+	"></div>
 
 	#outputBox{
 		position:absolute;
