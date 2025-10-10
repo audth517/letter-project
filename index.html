@@ -98,13 +98,13 @@
   });
 
   function applyGravity(el) {
-    const step = 3;
+    const step = 6;
     const interval = setInterval(() => {
       const rect = el.getBoundingClientRect();
-      if (gravity === 'down' && rect.bottom < window.innerHeight) {
+      if (gravity === 'down' && rect.bottom < window.innerHeight - step) {
         el.style.top = rect.top + step + 'px';
       } else if (gravity === 'up' && rect.top > 40) {
-        el.style.top = rect.top - step + 'px';
+        el.style.top = Math.max(40, el.offsetTop - step) + 'px';
       } else if (gravity === 'left' && rect.left > 0) {
         el.style.left = rect.left - step + 'px';
       } else if (gravity === 'right' && rect.right < window.innerWidth) {
