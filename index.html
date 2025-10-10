@@ -81,7 +81,7 @@
     typedText = '';
 
     typingPosition.x = e.clientX;
-    typingPosition.y = e.clientY;
+    typingPosition.y = e.clientY - canvas.offsetTop;
 
     typingSpan = document.createElement('span');
     typingSpan.className = 'text-item';
@@ -101,8 +101,8 @@
     const step = 6;
     const interval = setInterval(() => {
       const rect = el.getBoundingClientRect();
-      if (gravity === 'down' && rect.bottom < window.innerHeight - step) {
-        el.style.top = rect.top + step + 'px';
+      if (gravity === 'down' && el.offsetTop + el.offsetHeight < canvas.ofsetHeight) {
+        el.style.top = Math.min(canvas.offsetHeight - el.offsetHeight, el.offsetTop + step) + 'px';
       } else if (gravity === 'up' && rect.top > 40) {
         el.style.top = Math.max(40 - rect.height, el.offsetTop - step) + 'px';
       } else if (gravity === 'left' && rect.left > 0) {
