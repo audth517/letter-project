@@ -15,10 +15,10 @@
   }
   #bar {
     position: absolute;
-    top: 40;
+    top: 0;
     left: 0;
     width: 100%;
-    height: 0;
+    height: 40;
     border-bottom: 1px solid #403d3c;
     display: flex;
     justify-content: space-between;
@@ -81,7 +81,7 @@
     typedText = '';
 
     typingPosition.x = e.clientX;
-    typingPosition.y = e.clientY;
+    typingPosition.y = e.clientY - canvas.offsetTop;
 
     typingSpan = document.createElement('span');
     typingSpan.className = 'text-item';
