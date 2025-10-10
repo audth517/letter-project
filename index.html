@@ -102,7 +102,7 @@
     const interval = setInterval(() => {
       const rect = el.getBoundingClientRect();
       if (gravity === 'down' && rect.bottom < window.innerHeight - step) {
-        el.style.top = rect.top + step + 'px';
+        el.style.top = rect.top + step + canvas.offsetTop + 'px';
       } else if (gravity === 'up' && rect.top > 0) {
         el.style.top = Math.max(0, el.offsetTop - step) + 'px';
       } else if (gravity === 'left' && rect.left > 0) {
