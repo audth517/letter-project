@@ -101,10 +101,10 @@
     const step = 6;
     const interval = setInterval(() => {
       const rect = el.getBoundingClientRect();
-      if (gravity === 'down' && rect.bottom < window.innerHeight - step) {
-        el.style.top = rect.top + step + 'px';
-      } else if (gravity === 'up' && rect.top > 40) {
-        el.style.top = Math.max(40 - rect.height, el.offsetTop - step) + 'px';
+      if (gravity === 'down' && el.offsetTop + el.offsetHeight < window.innerHeight) {
+        el.style.top = Math.min(window.innerHeight - el.offsetHeight, el.offsetTop + step) + 'px';
+      } else if (gravity === 'up' && rect.top > 0) {
+        el.style.top = Math.max(0, el.offsetTop - step) + 'px';
       } else if (gravity === 'left' && rect.left > 0) {
         el.style.left = Math.max(0, el.offsetLeft - step) + 'px';
       } else if (gravity === 'right' && rect.right < window.innerWidth) {
