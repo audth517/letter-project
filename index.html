@@ -64,7 +64,7 @@
 
 <script>
   const canvas = document.getElementById('canvas');
-  let gravity = 'down'; // down, left, up, right
+  let gravity = 'down';
   let typedText = '';
   let typingPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
   let typingSpan = null;
@@ -97,7 +97,6 @@
     canvas.focus();
   });
 
-  // 중력 방향으로 이동 (애니메이션)
   function applyGravity(el) {
     const step = 3;
     const interval = setInterval(() => {
