@@ -2,14 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Inception</title>
+<title>Gravity Text</title>
 <style>
   body {
     margin: 0;
     height: 100vh;
     font-family: 'Courier New', monospace;
-    background: linear-gradient(to bottom, #f1e9e2, #d2cbc6);
-    color: #403d3c;
+    background: linear-gradient(to bottom, #f1e0e2, #d2cbc6);
+    color: #585554;
     overflow: hidden;
     user-select: none;
   }
@@ -37,7 +37,6 @@
     left: 0;
     width: 100%;
     height: calc(100% - 40px);
-    outline: none;
   }
   .text-item {
     position: absolute;
@@ -58,88 +57,74 @@
   let gravity = 'down'; // down, left, up, right
   let typedText = '';
   let textElements = [];
+  let typingPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 
-  canvas.focus();
+  // 클릭한 곳으로 타이핑 위치 이동
+  canvas.addEventListener('click', (e) => {
+    typingPosition.x = e.clientX;
+    typingPosition.y = e.clientY;
+    canvas.focus();
+  });
 
-  function getPositionForText(textElem, dir) {
-    const rects = textElements.map(e => e.getBoundingClientRect());
-    const canvasRect = canvas.getBoundingClientRect();
-    let x = 10, y = 10;
-
-    if(dir === 'down') {
-      y = 10;
-      x = 10;
-      rects.forEach(r => {
-        if(r.left <= x && x <= r.right && r.top <= y && y <= r.bottom){
-          y = r.bottom + 2;
-        }
-      });
-    } else if(dir === 'up') {
-      y = canvas.clientHeight - 30;
-      rects.forEach(r => {
-        if(r.left <= x && x <= r.right && r.top <= y && y <= r.bottom){
-          y = r.top - 20;
-        }
-      });
-    } else if(dir === 'left') {
-      x = canvas.clientWidth - 30;
-      rects.forEach(r => {
-        if(r.top <= y && y <= r.bottom && r.left <= x && x <= r.right){
-          x = r.left - textElem.offsetWidth;
-        }
-      });
-    } else if(dir === 'right') {
-      x = 10;
-      rects.forEach(r => {
-        if(r.top <= y && y <= r.bottom && r.left <= x && x <= r.right){
-          x = r.right + 2;
-        }
-      });
-    }
-    return {x, y};
+  // 중력 회전
+  function rotateGravity() {
+    const dirs = ['down', 'left', 'up', 'right'];
+    gravity = dirs[(dirs.indexOf(gravity) + 1) % 4];
   }
 
-  function renderGravityChange() {
-    textElements.forEach(e => {
-      const pos = getPositionForText(e, gravity);
-      e.style.left = pos.x + 'px';
-      e.style.top = pos.y + 'px';
-    });
+  // 텍스트 이동 (중력 방향)
+  function applyGravity(el) {
+    const step = 5;
+    const interval = setInterval(() => {
+      let rect = el.getBoundingClientRect();
+      if (gravity === 'down' && rect.bottom < window.innerHeight) {
+        el.style.top = rect.top + step + 'px';
+      } else if (gravity === 'up' && rect.top > 40) {
+        el.style.top = rect.top - step + 'px';
+      } else if (gravity === 'left' && rect.left > 0) {
+        el.style.left = rect.left - step + 'px';
+      } else if (gravity === 'right' && rect.right < window.innerWidth) {
+        el.style.left = rect.left + step + 'px';
+      } else {
+        clearInterval(interval);
+      }
+    }, 10);
   }
 
   canvas.addEventListener('keydown', (e) => {
-    if(e.key === 'Escape') {
+    if (e.key === 'Escape') {
       textElements.forEach(el => el.remove());
       textElements = [];
       gravity = 'down';
       typedText = '';
       return;
     }
-    if(e.key === 'Backspace') {
+
+    if (e.key === 'Backspace') {
       typedText = typedText.slice(0, -1);
       e.preventDefault();
       return;
     }
-    if(e.key === 'Enter') {
-      if(typedText.toLowerCase() === 'apple') {
-        const dirs = ['down', 'left', 'up', 'right'];
-        gravity = dirs[(dirs.indexOf(gravity)+1)%4];
-        renderGravityChange();
-      } else if(typedText.length > 0) {
+
+    if (e.key === 'Enter') {
+      if (typedText.toLowerCase() === 'apple') {
+        rotateGravity();
+      } else if (typedText.length > 0) {
         const span = document.createElement('span');
         span.className = 'text-item';
         span.textContent = typedText;
         canvas.appendChild(span);
+        span.style.left = typingPosition.x + 'px';
+        span.style.top = typingPosition.y + 'px';
         textElements.push(span);
-        const pos = getPositionForText(span, gravity);
-        span.style.left = pos.x + 'px';
-        span.style.top = pos.y + 'px';
+        applyGravity(span);
       }
       typedText = '';
       e.preventDefault();
       return;
     }
-    if(e.key.length === 1) {
+
+    if (e.key.length === 1) {
       typedText += e.key;
     }
   });
