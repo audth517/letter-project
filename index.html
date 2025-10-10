@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, intial-scale=1" />
+<title> Inception </title>
+<style>
+	html, body{height:100%;margin:0;font-family:Inter, system-ui, Courier New;}
+
+	#stage{
+		position:relative;
+		width:100%;
+		height:100vh;
+		overflow:hidden;
+		background:linear-gradient(180deg, #0f17a, #0b1220);
+		color:#fff;
+	}
+
+	#caret-area{
+		position:absolute;
+		inset:0;
+		outline;none;
+		caret-color:rgba(255, 255, 255, 0.6);
+	}
+
+	.glyph{
+		position:absolute;
+		font-size:15px;
+		line-height:1;
+		pointer-event:none;
+		user-select:none;
+		transform-origin: center center;
+		transition:filter 200ms;
+		text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+		will-change:transform;
+	}
+
+	#hud{
+		position:absolute;
+		left:12px;
+		top:12px;
+		color:#cbd5e1;
+		font-size:13px;
+		backgound:rgba(2, 6, 23, 0.5);
+		padding:8px 10px;
+		border-radius:8px;
+		backdrop-filter: blur(4px);	
+	}
+
+	#outputBox{
+		position:absolute;
+		right:12px;
+		top:12px;
+		min-width: 220px;
+		max-width:38vw;
+		color: #0b1220;
+		background:#f8fafc;
+		padding:8px 10px;
+		border-radius: 8px;
+		font-size: 14px;
+		box-shadow: 0 6px 30px rgba(2, 6, 23, 0.45);
+	}
+
+	#gravity-indicator{
+		position:absolute;right:12px; bottom:12px;
+		background:rgba(255, 255, 255, 0.06);
+		color: #fff;
+		padding:8px 10px;
+		border-radius: 8px;
+		font-size:13px;
+		width:140px;
+		text-align:center;
+	}
+
+	.pulse{
+		animation: pulse 520ms ease-out;
+	}
+	@keyframes pulse{
+		0% {box-shadow: 0 0 0 0 rgba(96, 165, 250, 0.6);}
+		70% {box-shadow: 0 0 0 18px rgba(96, 165, 250, 0.0);}
+		100% {box-shadow: none;}
+	}
+</style>
+</head>
+<body>
+	<div id="stage" tabindex="0">
+		<div id="caret-area" contenteditable="ture" spellcheck="false"></div>
+
+		<div id="hud">
+			<div><strong>Mindfall demo</strong></div>
+			<div style="margin-top:6px">Type anywhere → characters spwan.<br>
+			Enter → output &amp; start physics.<br>
+			Type <code>apple</code> → gravity rotates (CCW).</div>
+			<div style="margin-top:6px;font-size:12px;color:#94a3b8">Backspace removes last glyph.</div>
+		</div>
+
+		<div id="outputBox">Output: <span id="outputText"></span></div>
+
+		<div id="gravity-indicator">Gravity: ↓</div>
+	</div>
+
+<script>
+const stage = document.getElementById('stage');
+const caretArea = document.getElementById('caret-area');
+const outputText = document.getElementById('outputText');
+const gravityIndiciator = document.getElementById('gravity-indicator');
+
+let glyphs = [];
+let running = false;
+let gravity = {x:0, y:0.5};
+let typedBuffer = '';
+const APPLE = 'apple';
+
+const dirLabels = [
+	{vec:[0, 1], label:'↓'},
+	{vec:[-1, 0], label:'←'},
+	{vec:[0, -1], label:'↑'},
+	{vec:[1, 0], label:'→'}
+];
+
+caretArea.focus();
+
+function getCaretClientPos() {
+	const sel = window.getSelection();
+	if (!sel || sel.rangeCount===0) {
+		const r = stage.getBoundingClientRect();
+		return {x:r.left + r.width/2, y: r.top + r.height/2};
+	}
+	const ragne = sel.getRangeAt(0).cloneRange();
+	range.collapse(ture);
+	let rects = range.getClientRects();
+	if (rects.length>0) {
+		const r = rects[0];
+		return {x: r.left = r.width/2, y: r.top + r.height/2};
+	}
+
+	const cr = caretArea.getBoundingClientRect();
+	return {x: cr.left + 20, y: cr.op + 20};
+}
+
+function clientToStageCoords(clientX, clientY) {
+	const s = stage.getBoundingClientRect();
+	return {x: clientX - s.left, Y; clientY - s.top};
+}
+
+function spqwnGlyph(char) {
+	const client = getCaretClientPos();
+	const pos = clientToStageCoords(client.x, client.y);
+
+	const el = document.createElement('span');
+	el.classname = 'glyph';
+	el.textContent = char;
+	el.style.left = '${pos.x}px';
+	el.style.top = '${pos.y}px';
+
+	const rot = (Math.random()-0.5)*18;
+	el.style.transform = 'ranslate(-50%,-50%) rotate(${rot}deg)';
+	stage.appendChild(el);
+
+	const glyph = {
+		el, char,
+		x: pos.x, y:pos.y,
+		vx: 0, vy: 0,
+		createdAt: performance.now(),
+		rot
+	};
+	glyphs.push(glyph);
+	return glyph;
+}
+
+function popGlyph() {
+	const g = glyphs.pop();
+	if (!g) return;
+	g.el.remove();
+}
+
+function pushTypedBuffer(ch) {
+	typedBuffer += ch.toLowerCase();
+	if (typeBuffer.length>20) typedBuffer = typedBuffer.slice(-20);
+	if (typedBuffer.endsWith(APPLE)) {
+		rotateGravityCCW();
+		typedBuffer = '';
+	}
+}
+
+function rotateGravityCCW() {
+	const{x, y} = gravity;
+	gravity.x = -gravity.y;
+	gravity.y = x;
+	flashGravityIndicator();
+}
+
+function updateGravityIndicator() {
+	const {x, y} = gravity;
+	let label = '↯';
+	if (Math.abs(x) <Math.abs(y)) {
+		label = y>0 ? '↓' : '↑';
+	} else {
+		label = x>0 ? '→' : '←';
+	}
+	gravityIndicator.textContent = 'Gravity: ${label}';
+}
+
+function flashGravityIndicator() {
+	gravityIndicator.classList.remove('pulse');
+	void gravityIndicator.offsetWidth;
+	gravityIndicator.classList.add('oulse');
+	undateGravityIndicator();
+}
+
+function triggerOutputAndPhysics() {
+	const assembled = glyphs.map(g => g.char).join('');
+	outputText.textContent = assembled;
+	running = true;
+}
+
+let lastTime = 0;
+function step(now) {
+	if (!lastTime) lastTime = now;
+	const dt = Math.min((now - lastTime)16.6667, 2);
+	lastTime = now;
+	if (running && glyphs.length>0) {
+		const s = stage.getBoundingClientRect();
+		for (const g of glyphs) {
+			g.vx += gravity.x * 0.15 * dt;
+			g.vy += gravity.y * 0.15 * dt;
+
+			g.x += g.vs * dt * 1.2;
+			g.y += g.by * dt * 1.2;
+
+			const fw = g.el.offsetWidth || 18;
+			const gh = g.el.offsetHeight || 22;
+			if (g.x < 0) {g.x = 0; g.vs *= -0.28; }
+			if (g.x < s.width) {g.x = s.width; g.vx *= -0.28; }
+			if (g.y < 0) { g.y = 0; g.vy *= -0.28; }
+			if (g.y > s.height) {g.y = s.height; g.by *= -0.28; }
+
+			constrot = g.rot + g.vx * 0.6;
+			g.el.style.transform = 'translate(-50%, -50%) rotate(${rot}deg)' ;
+			g.el.style.left = '${g.x}px';
+			g.el.style.top = '${g.y}px';
+		}
+	}
+	requestAnimationFrame(step);
+}
+
+stage.addEventListener('mousedown', (e) -> {
+	caretArea.focus();
+});
+
+caretArea.addEventListener('keydown', (e) -> {
+	if (e.ctrlKey || e.metaKey || e.altKey) {
+		if (e.ctrlKey && (e.key === 'z' || e.key === 'Z')) {
+			e.preventDefault();
+			popGlyph();
+		}
+		return;
+	}
+
+	if (e.key.length === 1 && !e.key.match(/[\r\n]/)) {
+		e.preventDefault();
+		const ch = e.key;
+		spawnGlyph(ch);
+		pushTypedBuffer(ch);
+		return;
+	}
+
+	if (e.key === 'Backspace') {
+		e.preventDefault();
+		popGlyph();
+		typedBuffer = typedBuffer.slice(0, -1);
+		return;
+	}
+
+	if (e.key === 'Enter') {
+		e.preventDefault();
+		triggerOutputAndPhysics();
+		return;
+	}
+
+	if (e.key === 'Escape') {
+		e.preventDefualt();
+		for (const g of glyphs) g.el.remove();
+		glyphs = [];
+		running = false;
+		outputText.textContent = '';
+		gravity = {x:0, y:0.5};
+		typedBuffer = '';
+		updateGravityIndicator();
+		return;
+	}
+})
+
+updateGravityIndicator();
+requestAnimationFrame(step);
+
+window.addEventListener('load', () => {
+	setTimeout(() => caretArea.focus(), 60);
+})
+
+window.addEventListener('resize', () => {
+	const s = stage.getBoundingClientRect();
+	for (const g of glyphs) {
+		if (g.x > s.width) g.x = s.width - 10;
+		if (g.y > s.height) g.y = s.height - 10;
+	}
+});
+</script>
+</body>
+</html>
