@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
+<meta charset="UTF-8" />
 <title>Inception</title>
 <style>
   body {
@@ -48,7 +48,7 @@
     font-family: 'Courier New', monospace;
     color: #413e3e;
     user-select: none;
-    letter-spacing: -1.3px;
+    letter-spacing: -2px;
   }
 
   .apple {
@@ -122,15 +122,20 @@ function createTempChar(char, x, y) {
   return {char, x, y};
 }
 
-function createLetterAt(char, x, y) {
-  const el = document.createElement('span');
-  el.className = 'letter';
-  el.textContent = char;
-  el.style.left = x + 'px';
-  el.style.top = y + 'px';
-  typingArea.appendChild(el);
-  elements.push({el, type:'letter'});
-  moveElement(el, 'letter');
+// currentWordElements 배열로 그룹화된 입력 글자 요소 생성 함수
+function createLettersGroup(chars) {
+  const group = [];
+  for (const obj of chars) {
+    const el = document.createElement('span');
+    el.className = 'letter';
+    el.textContent = obj.char;
+    el.style.left = obj.x + 'px';
+    el.style.top = obj.y + 'px';
+    typingArea.appendChild(el);
+    group.push({el, type: 'letter'});
+    elements.push(group[group.length - 1]);
+  }
+  return group;
 }
 
 function createAppleAt(x, y) {
@@ -144,14 +149,13 @@ function createAppleAt(x, y) {
   moveElement(el, 'apple');
 }
 
-// 오른쪽 중력일 때 모든 글자 함께 이동시키기 함수
-function moveLettersRight() {
+// 오른쪽 중력일 때 그룹 글자 동시에 오른쪽 이동
+function moveLettersGroupRight(group) {
   const area = typingArea.getBoundingClientRect();
   const size = letterSize;
   let moved = false;
 
-  for (let obj of elements) {
-    if (obj.type !== 'letter') continue;
+  for (let obj of group) {
     let left = parseFloat(obj.el.style.left);
     let top = parseFloat(obj.el.style.top);
 
@@ -176,7 +180,7 @@ function moveLettersRight() {
   }
 
   if (moved) {
-    requestAnimationFrame(moveLettersRight);
+    requestAnimationFrame(() => moveLettersGroupRight(group));
   }
 }
 
@@ -218,10 +222,8 @@ function moveElement(el, type) {
         } else {
           rotateGravity();
         }
-      } else if (type === 'letter') {
-        moveLettersRight();
-        return; // 중복 애니메이션 방지 위해 반환
       }
+      // letter 타입 개별 이동은 여기서 처리하지 않음
     }
     el.style.top = top + 'px';
     el.style.left = left + 'px';
@@ -251,9 +253,14 @@ typingArea.addEventListener('keydown', (e) => {
     if (word.toLowerCase() === 'apple') {
       createAppleAt(currentInput[0].x, currentInput[0].y);
     } else {
-      currentInput.forEach(obj => {
-        createLetterAt(obj.char, obj.x, obj.y);
-      });
+      // 그룹으로 글자 생성
+      const group = createLettersGroup(currentInput);
+      if (gravity === 'right') {
+        moveLettersGroupRight(group);
+      } else {
+        // 오른쪽 중력이 아니면 개별 이동 실행
+        group.forEach(obj => moveElement(obj.el, 'letter'));
+      }
     }
     currentInput = [];
     const temps = typingArea.querySelectorAll('.temp');
