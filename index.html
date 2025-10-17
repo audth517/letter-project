@@ -1,88 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Letter Project</title>
-<style>
-  body {
-    margin: 0;
-    padding: 0;
-    background-color: #e6e4e3;
-    font-family: 'Courier New', monospace;
-    color: #413e3e;
-  }
-
-  #title {
-    position: absolute;
-    top: 40px;
-    left: 40px;
-    font-size: 24px;
-    font-weight: bold;
-  }
-
-  #description {
-    position: absolute;
-    top: 70px;
-    left: 40px;
-    white-space: pre-line;
-    line-height: 1.8em;
-  }
-
-  #typing-area {
-    position: absolute;
-    top: 200px;
-    left: 40px;
-    right: 40px;
-    bottom: 40px;
-    border: 1.2pt solid #dbd7d4;
-    border-radius: 9px;
-    box-shadow: 6px 6px 17px rgba(188, 185, 183, 0.6);
-    background-color: #e6e4e3;
-    overflow: hidden;
-    cursor: text;
-    outline: none;
-  }
-
-  .letter, .apple {
-    position: absolute;
-    font-family: 'Courier New', monospace;
-    color: #413e3e;
-    user-select: none;
-  }
-
-  .apple {
-    width: 30px;
-    height: 30px;
-  }
-
-  #cursor {
-    position: absolute;
-    width: 6px;
-    background-color: #404e3e;
-    animation: blink 1s step-start infinite;
-  }
-
-  @keyframes blink {
-    0%, 50% { opacity: 1; }
-    50.1%, 100% { opacity: 0; }
-  }
-</style>
-</head>
-<body>
-
-<div id="title">Inception</div>
-<div id="description">
-This project is inspired by Inception and Newton’s apple. The rules are as follows:
-1. You can type any letters or numbers.
-2. Place the cursor anywhere, type, and then press Enter.
-3. Type “Apple” or “apple” and observe what happens.
-4. Press Esc to reset.
-</div>
-
-<div id="typing-area" tabindex="0"></div>
-<div id="cursor"></div>
-
-<script>
 const typingArea = document.getElementById('typing-area');
 const cursorEl = document.getElementById('cursor');
 let gravity = 'down';
@@ -91,24 +6,23 @@ let cursor = {x: 10, y: 10};
 const letterSize = 20;
 const appleSize = 30;
 const gravityOrder = ['down', 'left', 'up', 'right'];
+let lettersBuffer = []; // 각 입력 위치를 저장
 
-// 커서 위치 업데이트
 function updateCursor() {
   cursorEl.style.left = (typingArea.offsetLeft + cursor.x) + 'px';
   cursorEl.style.top = (typingArea.offsetTop + cursor.y) + 'px';
   cursorEl.style.height = letterSize + 'px';
 }
 
-// 클릭 시 타이핑 시작 위치 설정
 typingArea.addEventListener('click', (e) => {
   const rect = typingArea.getBoundingClientRect();
   cursor.x = e.clientX - rect.left;
   cursor.y = e.clientY - rect.top;
   updateCursor();
   typingArea.focus();
+  lettersBuffer = []; // 새 입력 위치를 누르면 버퍼 리셋
 });
 
-// 글자/사과 생성
 function createLetter(char) {
   const el = document.createElement('span');
   el.className = 'letter';
@@ -116,8 +30,12 @@ function createLetter(char) {
   el.style.left = cursor.x + 'px';
   el.style.top = cursor.y + 'px';
   typingArea.appendChild(el);
-  elements.push({el, type:'letter'});
+  elements.push({el, type:'letter', x: cursor.x, y: cursor.y});
+  lettersBuffer.push({el, x: cursor.x, y: cursor.y}); // 위치 저장
   moveElement(el, 'letter');
+  // 다음 입력 커서 위치(오른쪽으로 이동)
+  cursor.x += letterSize;
+  updateCursor();
 }
 
 function createApple() {
@@ -127,11 +45,13 @@ function createApple() {
   el.style.left = cursor.x + 'px';
   el.style.top = cursor.y + 'px';
   typingArea.appendChild(el);
-  elements.push({el, type:'apple'});
+  elements.push({el, type:'apple', x: cursor.x, y: cursor.y});
+  lettersBuffer.push({el, x: cursor.x, y: cursor.y}); // 사과도 버퍼에 추가
   moveElement(el, 'apple');
+  cursor.x += appleSize; // 사과 크기만큼 커서 이동
+  updateCursor();
 }
 
-// 충돌 체크 및 이동
 function moveElement(el, type) {
   const area = typingArea.getBoundingClientRect();
   let top = parseFloat(el.style.top);
@@ -174,34 +94,50 @@ function moveElement(el, type) {
   step();
 }
 
-// 중력 회전
 function rotateGravity() {
   gravity = gravityOrder[(gravityOrder.indexOf(gravity) + 1) % 4];
 }
 
-// 키 입력 처리
 typingArea.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     elements.forEach(o => o.el.remove());
     elements = [];
+    lettersBuffer = [];
     gravity = 'down';
+    cursor.x = 10; // 초기화
+    cursor.y = 10;
+    updateCursor();
   } else if (e.key === 'Enter') {
     const text = typingArea.textContent.trim();
     if (!text) return;
-    if (text.toLowerCase() === 'apple') createApple();
-    else for (let char of text) createLetter(char);
+    if (text.toLowerCase() === 'apple') {
+      createApple();
+    } else {
+      for (let char of text) createLetter(char);
+    }
     typingArea.textContent = '';
   } else if (e.key.length === 1) {
-    // 클릭 위치 기준 타이핑
     typingArea.textContent += e.key;
+    createLetter(e.key);
+  } else if (e.key === 'Backspace') {
+    if (lettersBuffer.length > 0) {
+      const last = lettersBuffer.pop();
+      if (last.el) last.el.remove();
+      // 커서 위치 되돌리기
+      if (lettersBuffer.length > 0) {
+        cursor.x = lettersBuffer[lettersBuffer.length-1].x + letterSize;
+        cursor.y = lettersBuffer[lettersBuffer.length-1].y;
+      } else {
+        cursor.x = 10;
+        cursor.y = 10;
+      }
+      updateCursor();
+    }
+    // 실제 타이핑 영역 text도 삭제
+    typingArea.textContent = typingArea.textContent.slice(0,-1);
   }
   updateCursor();
 });
 
-// 초기 커서 위치
 updateCursor();
 typingArea.focus();
-</script>
-
-</body>
-</html>
