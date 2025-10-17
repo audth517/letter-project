@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Letter Project</title>
+<title>Inception</title>
 <style>
   body {
     margin: 0;
@@ -14,7 +14,7 @@
 
   #title {
     position: absolute;
-    top: 40px;
+    top: 55px;
     left: 40px;
     font-size: 24px;
     font-weight: bold;
@@ -22,7 +22,7 @@
 
   #description {
     position: absolute;
-    top: 70px;
+    top: 90px;
     left: 40px;
     white-space: pre-line;
     line-height: 1.8em;
@@ -30,7 +30,7 @@
 
   #typing-area {
     position: absolute;
-    top: 220px;
+    top: 270px;
     left: 40px;
     right: 40px;
     bottom: 40px;
@@ -53,6 +53,10 @@
   .apple {
     width: 30px;
     height: 30px;
+  }
+
+  .temp {
+    opacity: 0.5;
   }
 
   #cursor {
@@ -87,6 +91,7 @@ const typingArea = document.getElementById('typing-area');
 const cursorEl = document.getElementById('cursor');
 let gravity = 'down';
 let elements = [];
+let currentInput = [];
 let cursor = {x: 10, y: 10};
 const letterSize = 20;
 const appleSize = 30;
@@ -108,31 +113,38 @@ typingArea.addEventListener('click', (e) => {
   typingArea.focus();
 });
 
-// 글자/사과 생성
-function createLetter(char) {
+// 임시 글자/사과 표시 함수
+function createTempChar(char) {
+  const temp = document.createElement('span');
+  temp.className = 'letter temp';
+  temp.textContent = char;
+  temp.style.left = cursor.x + 'px';
+  temp.style.top = cursor.y + 'px';
+  typingArea.appendChild(temp);
+}
+
+// 실제 글자 생성
+function createLetterAt(char, x, y) {
   const el = document.createElement('span');
   el.className = 'letter';
   el.textContent = char;
-  el.style.left = cursor.x + 'px';
-  el.style.top = cursor.y + 'px';
+  el.style.left = x + 'px';
+  el.style.top = y + 'px';
   typingArea.appendChild(el);
   elements.push({el, type:'letter'});
   moveElement(el, 'letter');
-  cursor.x += letterSize; // 커서 오른쪽 이동
-  updateCursor();
 }
 
-function createApple() {
+// 실제 사과 생성
+function createAppleAt(x, y) {
   const el = document.createElement('img');
   el.src = 'apple.png';
   el.className = 'apple';
-  el.style.left = cursor.x + 'px';
-  el.style.top = cursor.y + 'px';
+  el.style.left = x + 'px';
+  el.style.top = y + 'px';
   typingArea.appendChild(el);
   elements.push({el, type:'apple'});
   moveElement(el, 'apple');
-  cursor.x += appleSize; // 사과도 커서 오른쪽 이동
-  updateCursor();
 }
 
 // 충돌 체크 및 이동
@@ -188,27 +200,40 @@ typingArea.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     elements.forEach(o => o.el.remove());
     elements = [];
+    currentInput = [];
+    cursor.x = 10;
+    cursor.y = 10;
     gravity = 'down';
+    // 임시 글자 제거
+    const temps = typingArea.querySelectorAll('.temp');
+    temps.forEach(t => t.remove());
+    updateCursor();
   } else if (e.key === 'Enter') {
-    const text = ''; // Enter는 이미 글자 하나씩 생성되므로 비워둠
+    let x = cursor.x;
+    let y = cursor.y;
+    currentInput.forEach(char => {
+      if (char.toLowerCase() === 'apple') createAppleAt(x, y);
+      else createLetterAt(char, x, y);
+      x += (char.toLowerCase() === 'apple' ? appleSize : letterSize);
+    });
+    currentInput = [];
+    // 임시 글자 제거
+    const temps = typingArea.querySelectorAll('.temp');
+    temps.forEach(t => t.remove());
   } else if (e.key === 'Backspace') {
-    // 마지막 요소 삭제
-    if (elements.length > 0) {
-      const last = elements.pop();
-      last.el.remove();
-      cursor.x -= (last.type === 'letter' ? letterSize : appleSize);
+    if (currentInput.length > 0) {
+      currentInput.pop();
+      cursor.x -= letterSize;
       if (cursor.x < 0) cursor.x = 0;
-      updateCursor();
+      const spans = typingArea.querySelectorAll('.temp');
+      if (spans.length > 0) spans[spans.length -1].remove();
     }
   } else if (e.key.length === 1) {
-    if (e.key.toLowerCase() === 'a' && e.key + typingArea.textContent.toLowerCase() === 'apple') {
-      // 개별 글자로 apple 입력 감지는 생략, 그냥 일반 글자로 처리
-      createLetter(e.key);
-    } else {
-      createLetter(e.key);
-    }
+    currentInput.push(e.key);
+    createTempChar(e.key);
+    cursor.x += letterSize;
+    updateCursor();
   }
-  updateCursor();
 });
 
 updateCursor();
