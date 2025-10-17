@@ -174,23 +174,32 @@ function moveElement(el, type) {
   function step() {
     let moved = false;
     if (gravity === 'down') {
-      if (top + size + 2 <= area.height && !isBlocked(left, top+2)) { top += 2; moved = true; }
-      else if (type === 'apple') rotateGravity();
+      if (top + size + 2 <= area.height && !isBlocked(left, top+2)) { 
+        top += 2; 
+        moved = true; 
+      } else if (type === 'apple') rotateGravity();
     } else if (gravity === 'left') {
-      if (left - 2 >= 0 && !isBlocked(left-2, top)) { left -= 2; moved = true; }
-      else if (type === 'apple') rotateGravity();
+      if (left - 2 >= 0 && !isBlocked(left-2, top)) { 
+        left -= 2; 
+        moved = true; 
+      } else if (type === 'apple') rotateGravity();
     } else if (gravity === 'up') {
-      if (top - 2 >= 0 && !isBlocked(left, top-2)) { top -= 2; moved = true; }
-      else if (type === 'apple') rotateGravity();
+      if (top - 2 >= 0 && !isBlocked(left, top-2)) { 
+        top -= 2; 
+        moved = true; 
+      } else if (type === 'apple') rotateGravity();
     } else if (gravity === 'right') {
-      if (left + size + 2 <= area.width && !isBlocked(left+2, top)) { left += 2; moved = true; }
-      else if (type === 'apple') rotateGravity();
+      if (left + size + 2 <= area.width && !isBlocked(left+2, top)) { 
+        left += 2; 
+        moved = true; 
+      } else if (type === 'apple') rotateGravity();
     }
     el.style.top = top + 'px';
     el.style.left = left + 'px';
     if (moved) requestAnimationFrame(step);
-  }
-  step();
+}
+step();
+
 }
 
 // 중력 회전
