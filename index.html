@@ -171,32 +171,24 @@ function moveElement(el, type) {
     return false;
   }
 
-function step() {
-  let moved = false;
-
-  if (gravity === 'down') {
-    if (top + size + 2 <= area.height && !isBlocked(left, top+2)) { top += 2; moved = true; }
-    else if (type === 'apple') rotateGravity();
-  } else if (gravity === 'left') {
-    if (left - 2 >= 0 && !isBlocked(left-2, top)) { left -= 2; moved = true; }
-    else if (type === 'apple') rotateGravity();
-  } else if (gravity === 'up') {
-    if (top - 2 >= 0 && !isBlocked(left, top-2)) { top -= 2; moved = true; }
-    else if (type === 'apple') rotateGravity();
-  } else if (gravity === 'right') {
-    // 오른쪽 중력: 각 글자가 마지막 글자 기준으로 오른쪽으로 같이 이동
-    const rightMostX = Math.max(...elements.filter(o => o.type==='letter').map(o => parseFloat(o.el.style.left)));
-    const offset = rightMostX + size - left; // 현재 요소를 오른쪽 기준으로 맞추기
-    if (left + size + 2 <= area.width && !isBlocked(left+2, top)) { 
-      left += 2; 
-      moved = true;
-    } else if (type === 'apple') rotateGravity();
-  }
-
-  el.style.top = top + 'px';
-  el.style.left = left + 'px';
-
-  if (moved) requestAnimationFrame(step);
+  function step() {
+    let moved = false;
+    if (gravity === 'down') {
+      if (top + size + 2 <= area.height && !isBlocked(left, top+2)) { top += 2; moved = true; }
+      else if (type === 'apple') rotateGravity();
+    } else if (gravity === 'left') {
+      if (left - 2 >= 0 && !isBlocked(left-2, top)) { left -= 2; moved = true; }
+      else if (type === 'apple') rotateGravity();
+    } else if (gravity === 'up') {
+      if (top - 2 >= 0 && !isBlocked(left, top-2)) { top -= 2; moved = true; }
+      else if (type === 'apple') rotateGravity();
+    } else if (gravity === 'right') {
+      if (left + size + 2 <= area.width && !isBlocked(left+2, top)) { left += 2; moved = true; }
+      else if (type === 'apple') rotateGravity();
+    }
+    el.style.top = top + 'px';
+    el.style.left = left + 'px';
+    if (moved) requestAnimationFrame(step);
   }
   step();
 }
@@ -228,9 +220,25 @@ typingArea.addEventListener('keydown', (e) => {
         createLetterAt(obj.char, obj.x, obj.y);
       });
     }
+  } else if (e.key === 'Enter') {
+    if(currentInput.length === 0) return;
+    let word = currentInput.map(c => c.char).join('');
+    let x = cursor.x;
+    let y = cursor.y;
+
+    if (word.toLowerCase() === 'apple') {
+      createAppleAt(x, y);
+    } else {
+      currentInput.forEach(obj => {
+        createLetterAt(obj.char, x, y);
+        x += letterSize; // 오른쪽 중력도 순서대로 x 증가
+      });
+  }
+
     currentInput = [];
     const temps = typingArea.querySelectorAll('.temp');
     temps.forEach(t => t.remove());
+    
   } else if (e.key === 'Backspace') {
     if (currentInput.length > 0) {
       currentInput.pop();
