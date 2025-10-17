@@ -77,7 +77,7 @@
 
 <div id="title">Inception</div>
 <div id="description">
-This project is inspired by the film 'Inception' and Newton’s apple. The rules are as follows:
+This project is inspired by the film 'Inception' and Newton's apple. The rules are as follows:
 1. You can type any letters or numbers.
 2. Place the cursor anywhere, type, and then press Enter.
 3. Type "Apple" or "apple" and observe what happens.
@@ -183,7 +183,7 @@ function moveElement(el, type) {
       if (top - 2 >= 0 && !isBlocked(left, top-2)) { top -= 2; moved = true; }
       else if (type === 'apple') rotateGravity();
     } else if (gravity === 'right') {
-      if (left + size + 2 <= area.width && !isBlocked(left+2, top)) { left += 2; moved = true; }
+      if (left - size + 2 <= area.width && !isBlocked(left+2, top)) { left += 2; moved = true; }
       else if (type === 'apple') rotateGravity();
     }
     el.style.top = top + 'px';
