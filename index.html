@@ -22,7 +22,7 @@
 
   #description {
     position: absolute;
-    top: 87px;
+    top: 95px;
     left: 50px;
     white-space: pre-line;
     line-height: 1.5em;
@@ -48,7 +48,7 @@
     font-family: 'Courier New', monospace;
     color: #413e3e;
     user-select: none;
-    letter-spacing: -1px;
+    letter-spacing: -1.3px; /* 자간 줄이기 */
   }
 
   .apple {
@@ -64,6 +64,7 @@
     position: absolute;
     width: 6px;
     background-color: #404e3e;
+    /* 초기에는 깜빡이지 않음, 클릭 시 애니메이션 추가 */
   }
 
   @keyframes blink {
@@ -79,7 +80,7 @@
 This project is inspired by the film 'Inception' and Newton’s apple. The rules are as follows:
 1. You can type any letters or numbers.
 2. Place the cursor anywhere, type, and then press Enter.
-3. Type "Apple" or "apple" and observe what happens.
+3. Type "Apple" or "apple" and see what happens.
 4. Press Esc to reset.
 </div>
 
@@ -97,12 +98,14 @@ const letterSize = 20;
 const appleSize = 30;
 const gravityOrder = ['down', 'left', 'up', 'right'];
 
+// 커서 위치 업데이트
 function updateCursor() {
   cursorEl.style.left = (typingArea.offsetLeft + cursor.x) + 'px';
   cursorEl.style.top = (typingArea.offsetTop + cursor.y) + 'px';
   cursorEl.style.height = letterSize + 'px';
 }
 
+// 클릭 시 타이핑 시작 위치 설정 및 깜빡임 시작
 typingArea.addEventListener('click', (e) => {
   const rect = typingArea.getBoundingClientRect();
   cursor.x = e.clientX - rect.left;
@@ -112,6 +115,7 @@ typingArea.addEventListener('click', (e) => {
   cursorEl.style.animation = "blink 1s step-start infinite";
 });
 
+// 임시 글자/사과 표시 함수 (좌표 저장)
 function createTempChar(char, x, y) {
   const temp = document.createElement('span');
   temp.className = 'letter temp';
@@ -122,6 +126,7 @@ function createTempChar(char, x, y) {
   return {char, x, y};
 }
 
+// 실제 글자 생성
 function createLetterAt(char, x, y) {
   const el = document.createElement('span');
   el.className = 'letter';
@@ -133,6 +138,7 @@ function createLetterAt(char, x, y) {
   moveElement(el, 'letter');
 }
 
+// 실제 사과 생성
 function createAppleAt(x, y) {
   const el = document.createElement('img');
   el.src = 'apple.png';
@@ -144,14 +150,12 @@ function createAppleAt(x, y) {
   moveElement(el, 'apple');
 }
 
-function rotateGravity() {
-  gravity = gravityOrder[(gravityOrder.indexOf(gravity) + 1) % 4];
-}
-
+// 충돌 체크 및 이동
 function moveElement(el, type) {
   const area = typingArea.getBoundingClientRect();
   let top = parseFloat(el.style.top);
   let left = parseFloat(el.style.left);
+  const size = type === 'letter' ? letterSize : appleSize;
 
   function isBlocked(nextX, nextY) {
     for (let obj of elements) {
@@ -159,8 +163,8 @@ function moveElement(el, type) {
       const ox = parseFloat(obj.el.style.left);
       const oy = parseFloat(obj.el.style.top);
       const osize = obj.type === 'letter' ? letterSize : appleSize;
-      if (nextX < ox + osize && nextX + (type==='letter'?letterSize:appleSize) > ox &&
-          nextY < oy + osize && nextY + (type==='letter'?letterSize:appleSize) > oy) {
+      if (nextX < ox + osize && nextX + size > ox &&
+          nextY < oy + osize && nextY + size > oy) {
         return true;
       }
     }
@@ -169,9 +173,8 @@ function moveElement(el, type) {
 
   function step() {
     let moved = false;
-
     if (gravity === 'down') {
-      if (top + (type==='letter'?letterSize:appleSize) + 2 <= area.height && !isBlocked(left, top+2)) { top += 2; moved = true; }
+      if (top + size + 2 <= area.height && !isBlocked(left, top+2)) { top += 2; moved = true; }
       else if (type === 'apple') rotateGravity();
     } else if (gravity === 'left') {
       if (left - 2 >= 0 && !isBlocked(left-2, top)) { left -= 2; moved = true; }
@@ -180,44 +183,89 @@ function moveElement(el, type) {
       if (top - 2 >= 0 && !isBlocked(left, top-2)) { top -= 2; moved = true; }
       else if (type === 'apple') rotateGravity();
     } else if (gravity === 'right') {
-      if (type === 'letter') {
-        let group = elements.filter(o => o.type==='letter');
-        let canMove = group.every(o => {
-          let nextX = parseFloat(o.el.style.left) + 2;
-          return nextX + letterSize <= area.width &&
-            !elements.some(obj => {
-              if (obj.type!=='letter') return false;
-              if (group.includes(obj)) return false;
-              let ox = parseFloat(obj.el.style.left);
-              let oy = parseFloat(obj.el.style.top);
-              return nextX < ox + letterSize && nextX + letterSize > ox &&
-                     parseFloat(o.el.style.top) < oy + letterSize && parseFloat(o.el.style.top) + letterSize > oy;
+      // 오른쪽으로 그룹 전체 이동 함수
+      function moveGroupToRight(group) {
+        const area = typingArea.getBoundingClientRect();
+        let canMove = true;
+    
+        // 오른쪽 끝 또는 장애물에 닿을 때까지 반복
+        while (canMove) {
+          for (let obj of group) {
+            const nextLeft = parseFloat(obj.el.style.left) + 2;
+            const size = letterSize;
+            // 오른쪽 벽 체크 및 다른 글자 충돌 체크
+            if (
+              nextLeft + size > area.width ||
+              isBlocked(nextLeft, parseFloat(obj.el.style.top), obj.el)
+            ) {
+              canMove = false;
+              break;
+            }
+          }
+          // 모두 통과 시 모든 글자 위치 업데이트
+          if (canMove) {
+            group.forEach(obj => {
+              obj.el.style.left = (parseFloat(obj.el.style.left) + 2) + 'px';
             });
-        });
-        if (canMove) {
-          group.forEach(o => {
-            o.el.style.left = (parseFloat(o.el.style.left) + 2) + 'px';
-          });
-          moved = true;
+          }
         }
-      } else {
-        if (left + (type==='letter'?letterSize:appleSize) + 2 <= area.width && !isBlocked(left+2, top)) { left += 2; moved = true; }
-        else if (type === 'apple') rotateGravity();
       }
-    }
+    
+      // moveElement 함수 예시 (group 인자 추가 필요)
+      function moveElement(el, type, group) {
+        const area = typingArea.getBoundingClientRect();
+        let top = parseFloat(el.style.top);
+        let left = parseFloat(el.style.left);
+        const size = type === 'letter' ? letterSize : appleSize;
+    
+        function step() {
+          let moved = false;
+    
+          if (gravity === 'down') {
+            if (top + size + 2 <= area.height && !isBlocked(left, top + 2)) {
+              top += 2;
+              moved = true;
+            } else if (type === 'apple') {
+              rotateGravity();
+            }
+          } else if (gravity === 'left') {
+            if (left - 2 >= 0 && !isBlocked(left - 2, top)) {
+              left -= 2;
+              moved = true;
+            } else if (type === 'apple') {
+              rotateGravity();
+            }
+          } else if (gravity === 'up') {
+            if (top - 2 >= 0 && !isBlocked(left, top - 2)) {
+              top -= 2;
+              moved = true;
+            } else if (type === 'apple') {
+              rotateGravity();
+            }
+          } else if (gravity === 'right') {
+            // 오른쪽 중력 시 그룹 단위로 이동 처리
+            moveGroupToRight(group);
+            return; // 그룹 이동 함수에서 이미 이동 완료
+          }
+    
+          el.style.top = top + 'px';
+          el.style.left = left + 'px';
+    
+          if (moved) {
+            requestAnimationFrame(step);
+          }
+        }
+    
+        step();
+      }
 
-    // right gravity일 때 letter 그룹이면 개별 left 적용하지 않음
-    if (!(gravity === 'right' && type === 'letter')) {
-      el.style.top = top + 'px';
-      el.style.left = left + 'px';
-    }
 
-    if (moved) requestAnimationFrame(step);
-  }
-
-  step();
+// 중력 회전
+function rotateGravity() {
+  gravity = gravityOrder[(gravityOrder.indexOf(gravity) + 1) % 4];
 }
 
+// 키 입력 처리
 typingArea.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     elements.forEach(o => o.el.remove());
@@ -250,7 +298,8 @@ typingArea.addEventListener('keydown', (e) => {
       if (currentInput.length > 0) {
         cursor.x = currentInput[currentInput.length -1].x + letterSize;
         cursor.y = currentInput[currentInput.length -1].y;
-      } else {
+      }
+      else {
         cursor.x = 10;
         cursor.y = 10;
       }
