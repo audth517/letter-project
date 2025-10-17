@@ -4,73 +4,15 @@
 <meta charset="UTF-8">
 <title>Inception</title>
 <style>
-  body {
-    margin: 0;
-    padding: 0;
-    background-color: #e6e4e3;
-    font-family: 'Courier New', monospace;
-    color: #413e3e;
-  }
-
-  #title {
-    position: absolute;
-    top: 55px;
-    left: 40px;
-    font-size: 24px;
-    font-weight: bold;
-  }
-
-  #description {
-    position: absolute;
-    top: 90px;
-    left: 40px;
-    white-space: pre-line;
-    line-height: 1.8em;
-  }
-
-  #typing-area {
-    position: absolute;
-    top: 270px;
-    left: 40px;
-    right: 40px;
-    bottom: 40px;
-    border: 1.2pt solid #dbd7d4;
-    border-radius: 9px;
-    box-shadow: 6px 6px 17px rgba(188, 185, 183, 0.6);
-    background-color: #e6e4e3;
-    overflow: hidden;
-    cursor: text;
-    outline: none;
-  }
-
-  .letter, .apple, .temp {
-    position: absolute;
-    font-family: 'Courier New', monospace;
-    color: #413e3e;
-    user-select: none;
-    letter-spacing: -1px; /* 자간 줄이기 */
-  }
-
-  .apple {
-    width: 30px;
-    height: 30px;
-  }
-
-  .temp {
-    opacity: 0.5;
-  }
-
-  #cursor {
-    position: absolute;
-    width: 6px;
-    background-color: #404e3e;
-    /* 초기에는 깜빡이지 않음 */
-  }
-
-  @keyframes blink {
-    0%, 50% { opacity: 1; }
-    50.1%, 100% { opacity: 0; }
-  }
+  body { margin:0; padding:0; background-color:#e6e4e3; font-family:'Courier New', monospace; color:#413e3e;}
+  #title {position:absolute; top:55px; left:40px; font-size:24px; font-weight:bold;}
+  #description {position:absolute; top:90px; left:40px; white-space:pre-line; line-height:1.8em;}
+  #typing-area {position:absolute; top:270px; left:40px; right:40px; bottom:40px; border:1.2pt solid #dbd7d4; border-radius:9px; box-shadow:6px 6px 17px rgba(188,185,183,0.6); background-color:#e6e4e3; overflow:hidden; cursor:text; outline:none;}
+  .letter, .apple, .temp {position:absolute; font-family:'Courier New', monospace; color:#413e3e; user-select:none; letter-spacing:-1px;}
+  .apple {width:30px; height:30px;}
+  .temp {opacity:0.5;}
+  #cursor {position:absolute; width:6px; background-color:#404e3e;}
+  @keyframes blink {0%,50%{opacity:1;}50.1%,100%{opacity:0;}}
 </style>
 </head>
 <body>
@@ -93,20 +35,20 @@ const cursorEl = document.getElementById('cursor');
 let gravity = 'down';
 let elements = [];
 let currentInput = [];
-let cursor = {x: 10, y: 10};
+let cursor = {x:10, y:10};
 const letterSize = 20;
 const appleSize = 30;
-const gravityOrder = ['down', 'left', 'up', 'right'];
+const gravityOrder = ['down','left','up','right'];
 
-// 커서 위치 업데이트
-function updateCursor() {
-  cursorEl.style.left = (typingArea.offsetLeft + cursor.x) + 'px';
-  cursorEl.style.top = (typingArea.offsetTop + cursor.y) + 'px';
-  cursorEl.style.height = letterSize + 'px';
+// 커서 업데이트
+function updateCursor(){
+  cursorEl.style.left = (typingArea.offsetLeft + cursor.x)+'px';
+  cursorEl.style.top = (typingArea.offsetTop + cursor.y)+'px';
+  cursorEl.style.height = letterSize+'px';
 }
 
-// 클릭 시 타이핑 시작 위치 설정 및 깜빡임 시작
-typingArea.addEventListener('click', (e) => {
+// 클릭 시 커서 위치, 깜빡임 시작
+typingArea.addEventListener('click', e=>{
   const rect = typingArea.getBoundingClientRect();
   cursor.x = e.clientX - rect.left;
   cursor.y = e.clientY - rect.top;
@@ -115,129 +57,133 @@ typingArea.addEventListener('click', (e) => {
   cursorEl.style.animation = "blink 1s step-start infinite";
 });
 
-// 임시 글자/사과 표시 함수
-function createTempChar(char) {
+// 임시 글자
+function createTempChar(char){
   const temp = document.createElement('span');
-  temp.className = 'letter temp';
-  temp.textContent = char;
-  temp.style.left = cursor.x + 'px';
-  temp.style.top = cursor.y + 'px';
+  temp.className='letter temp';
+  temp.textContent=char;
+  temp.style.left = cursor.x+'px';
+  temp.style.top = cursor.y+'px';
   typingArea.appendChild(temp);
 }
 
-// 실제 글자 생성
-function createLetterAt(char, x, y) {
+// 실제 글자
+function createLetterAt(char, x, y){
   const el = document.createElement('span');
-  el.className = 'letter';
-  el.textContent = char;
-  el.style.left = x + 'px';
-  el.style.top = y + 'px';
+  el.className='letter';
+  el.textContent=char;
+  el.style.left=x+'px';
+  el.style.top=y+'px';
   typingArea.appendChild(el);
-  elements.push({el, type:'letter'});
-  moveElement(el, 'letter');
+  elements.push({el,type:'letter'});
+  moveElement(el,'letter');
 }
 
-// 실제 사과 생성
-function createAppleAt(x, y) {
-  const el = document.createElement('img');
-  el.src = 'apple.png';
-  el.className = 'apple';
-  el.style.left = x + 'px';
-  el.style.top = y + 'px';
+// 사과 생성
+function createAppleAt(x,y){
+  const el=document.createElement('img');
+  el.src='apple.png';
+  el.className='apple';
+  el.style.left=x+'px';
+  el.style.top=y+'px';
   typingArea.appendChild(el);
-  elements.push({el, type:'apple'});
-  moveElement(el, 'apple');
+  elements.push({el,type:'apple'});
+  moveElement(el,'apple');
 }
 
-// 충돌 체크 및 이동
-function moveElement(el, type) {
+// 충돌 이동
+function moveElement(el,type){
   const area = typingArea.getBoundingClientRect();
-  let top = parseFloat(el.style.top);
-  let left = parseFloat(el.style.left);
-  const size = type === 'letter' ? letterSize : appleSize;
+  let top=parseFloat(el.style.top);
+  let left=parseFloat(el.style.left);
+  const size = type==='letter'?letterSize:appleSize;
 
-  function isBlocked(nextX, nextY) {
-    for (let obj of elements) {
-      if (obj.el === el) continue;
-      const ox = parseFloat(obj.el.style.left);
-      const oy = parseFloat(obj.el.style.top);
-      const osize = obj.type === 'letter' ? letterSize : appleSize;
-      if (nextX < ox + osize && nextX + size > ox &&
-          nextY < oy + osize && nextY + size > oy) {
-        return true;
-      }
+  function isBlocked(nextX,nextY){
+    for(let obj of elements){
+      if(obj.el===el) continue;
+      const ox=parseFloat(obj.el.style.left);
+      const oy=parseFloat(obj.el.style.top);
+      const osize = obj.type==='letter'?letterSize:appleSize;
+      if(nextX<ox+osize && nextX+size>ox && nextY<oy+osize && nextY+size>oy) return true;
     }
     return false;
   }
 
-  function step() {
-    let moved = false;
-    if (gravity === 'down') {
-      if (top + size + 2 <= area.height && !isBlocked(left, top+2)) { top += 2; moved = true; }
-      else if (type === 'apple') rotateGravity();
-    } else if (gravity === 'left') {
-      if (left - 2 >= 0 && !isBlocked(left-2, top)) { left -= 2; moved = true; }
-      else if (type === 'apple') rotateGravity();
-    } else if (gravity === 'up') {
-      if (top - 2 >= 0 && !isBlocked(left, top-2)) { top -= 2; moved = true; }
-      else if (type === 'apple') rotateGravity();
-    } else if (gravity === 'right') {
-      if (left + size + 2 <= area.width && !isBlocked(left+2, top)) { left += 2; moved = true; }
-      else if (type === 'apple') rotateGravity();
+  function step(){
+    let moved=false;
+    if(gravity==='down'){
+      if(top+size+2<=area.height && !isBlocked(left,top+2)){top+=2;moved=true;}
+      else if(type==='apple') rotateGravity();
+    }else if(gravity==='left'){
+      if(left-2>=0 && !isBlocked(left-2,top)){left-=2;moved=true;}
+      else if(type==='apple') rotateGravity();
+    }else if(gravity==='up'){
+      if(top-2>=0 && !isBlocked(left,top-2)){top-=2;moved=true;}
+      else if(type==='apple') rotateGravity();
+    }else if(gravity==='right'){
+      if(left+size+2<=area.width && !isBlocked(left+2,top)){left+=2;moved=true;}
+      else if(type==='apple') rotateGravity();
     }
-    el.style.top = top + 'px';
-    el.style.left = left + 'px';
-    if (moved) requestAnimationFrame(step);
+    el.style.top=top+'px';
+    el.style.left=left+'px';
+    if(moved) requestAnimationFrame(step);
   }
   step();
 }
 
 // 중력 회전
-function rotateGravity() {
-  gravity = gravityOrder[(gravityOrder.indexOf(gravity) + 1) % 4];
+function rotateGravity(){
+  gravity = gravityOrder[(gravityOrder.indexOf(gravity)+1)%4];
+  // 기존 요소 재정렬
+  elements.forEach(obj=>{
+    const el=obj.el;
+    const area = typingArea.getBoundingClientRect();
+    const size = obj.type==='letter'?letterSize:appleSize;
+    if(gravity==='down'){ el.style.top=Math.min(parseFloat(el.style.top), area.height-size)+'px'; }
+    else if(gravity==='up'){ el.style.top=Math.max(parseFloat(el.style.top),0)+'px'; }
+    else if(gravity==='left'){ el.style.left=0; }
+    else if(gravity==='right'){ el.style.left=area.width-size; }
+  });
 }
 
-// 키 입력 처리
-typingArea.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    elements.forEach(o => o.el.remove());
-    elements = [];
-    currentInput = [];
-    cursor.x = 10;
-    cursor.y = 10;
-    gravity = 'down';
-    // 임시 글자 제거
-    const temps = typingArea.querySelectorAll('.temp');
-    temps.forEach(t => t.remove());
+// 키 입력
+typingArea.addEventListener('keydown', e=>{
+  if(e.key==='Escape'){
+    elements.forEach(o=>o.el.remove());
+    elements=[];
+    currentInput=[];
+    cursor.x=10; cursor.y=10;
+    const temps=typingArea.querySelectorAll('.temp');
+    temps.forEach(t=>t.remove());
+    gravity='down';
     updateCursor();
-  } else if (e.key === 'Enter') {
-    let x = cursor.x;
-    let y = cursor.y;
+  }else if(e.key==='Enter'){
+    let x=cursor.x; let y=cursor.y;
     let word = currentInput.join('');
-    if (word.toLowerCase() === 'apple') {
-      createAppleAt(x, y);
-    } else {
-      currentInput.forEach(char => {
-        createLetterAt(char, x, y);
-        x += letterSize;
+    if(word.toLowerCase()==='apple'){ createAppleAt(x,y); }
+    else{
+      currentInput.forEach(char=>{
+        createLetterAt(char,x,y);
+        if(gravity==='down'||gravity==='up') x+=letterSize;
+        else if(gravity==='left') x-=letterSize;
+        else if(gravity==='right') x+=letterSize;
       });
     }
-    currentInput = [];
-    // 임시 글자 제거
-    const temps = typingArea.querySelectorAll('.temp');
-    temps.forEach(t => t.remove());
-  } else if (e.key === 'Backspace') {
-    if (currentInput.length > 0) {
+    currentInput=[];
+    const temps=typingArea.querySelectorAll('.temp');
+    temps.forEach(t=>t.remove());
+  }else if(e.key==='Backspace'){
+    if(currentInput.length>0){
       currentInput.pop();
-      cursor.x -= letterSize;
-      if (cursor.x < 0) cursor.x = 0;
-      const spans = typingArea.querySelectorAll('.temp');
-      if (spans.length > 0) spans[spans.length -1].remove();
+      cursor.x-=letterSize;
+      if(cursor.x<0) cursor.x=0;
+      const spans=typingArea.querySelectorAll('.temp');
+      if(spans.length>0) spans[spans.length-1].remove();
     }
-  } else if (e.key.length === 1) {
+  }else if(e.key.length===1){
     currentInput.push(e.key);
     createTempChar(e.key);
-    cursor.x += letterSize;
+    cursor.x+=letterSize;
     updateCursor();
   }
 });
