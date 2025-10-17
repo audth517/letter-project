@@ -25,7 +25,7 @@
     top: 87px;
     left: 50px;
     white-space: pre-line;
-    line-height: 1.6em;
+    line-height: 1.5em;
   }
 
   #typing-area {
@@ -182,20 +182,18 @@ function moveElement(el, type) {
     } else if (gravity === 'right') {
       if (type === 'letter') {
         let group = elements.filter(o => o.type==='letter');
-    // 그룹 내부 글자는 충돌 체크 제외
         let canMove = group.every(o => {
           let nextX = parseFloat(o.el.style.left) + 2;
           return nextX + letterSize <= area.width &&
             !elements.some(obj => {
               if (obj.type!=='letter') return false;
-              if (group.includes(obj)) return false; // 그룹 내부는 제외
+              if (group.includes(obj)) return false;
               let ox = parseFloat(obj.el.style.left);
               let oy = parseFloat(obj.el.style.top);
               return nextX < ox + letterSize && nextX + letterSize > ox &&
                      parseFloat(o.el.style.top) < oy + letterSize && parseFloat(o.el.style.top) + letterSize > oy;
             });
         });
-
         if (canMove) {
           group.forEach(o => {
             o.el.style.left = (parseFloat(o.el.style.left) + 2) + 'px';
@@ -203,12 +201,20 @@ function moveElement(el, type) {
           moved = true;
         }
       } else {
-        if (left + size + 2 <= area.width && !isBlocked(left+2, top)) {
-          left += 2; moved = true;
-        } else if (type === 'apple') rotateGravity();
+        if (left + (type==='letter'?letterSize:appleSize) + 2 <= area.width && !isBlocked(left+2, top)) { left += 2; moved = true; }
+        else if (type === 'apple') rotateGravity();
       }
     }
-  
+
+    // right gravity일 때 letter 그룹이면 개별 left 적용하지 않음
+    if (!(gravity === 'right' && type === 'letter')) {
+      el.style.top = top + 'px';
+      el.style.left = left + 'px';
+    }
+
+    if (moved) requestAnimationFrame(step);
+  }
+
   step();
 }
 
