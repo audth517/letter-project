@@ -171,24 +171,32 @@ function moveElement(el, type) {
     return false;
   }
 
-  function step() {
-    let moved = false;
-    if (gravity === 'down') {
-      if (top + size + 2 <= area.height && !isBlocked(left, top+2)) { top += 2; moved = true; }
-      else if (type === 'apple') rotateGravity();
-    } else if (gravity === 'left') {
-      if (left - 2 >= 0 && !isBlocked(left-2, top)) { left -= 2; moved = true; }
-      else if (type === 'apple') rotateGravity();
-    } else if (gravity === 'up') {
-      if (top - 2 >= 0 && !isBlocked(left, top-2)) { top -= 2; moved = true; }
-      else if (type === 'apple') rotateGravity();
-    } else if (gravity === 'right') {
-      if (left + size + 2 <= area.width && !isBlocked(left+2, top)) { left += 2; moved = true; }
-      else if (type === 'apple') rotateGravity();
-    }
-    el.style.top = top + 'px';
-    el.style.left = left + 'px';
-    if (moved) requestAnimationFrame(step);
+function step() {
+  let moved = false;
+
+  if (gravity === 'down') {
+    if (top + size + 2 <= area.height && !isBlocked(left, top+2)) { top += 2; moved = true; }
+    else if (type === 'apple') rotateGravity();
+  } else if (gravity === 'left') {
+    if (left - 2 >= 0 && !isBlocked(left-2, top)) { left -= 2; moved = true; }
+    else if (type === 'apple') rotateGravity();
+  } else if (gravity === 'up') {
+    if (top - 2 >= 0 && !isBlocked(left, top-2)) { top -= 2; moved = true; }
+    else if (type === 'apple') rotateGravity();
+  } else if (gravity === 'right') {
+    // 오른쪽 중력: 각 글자가 마지막 글자 기준으로 오른쪽으로 같이 이동
+    const rightMostX = Math.max(...elements.filter(o => o.type==='letter').map(o => parseFloat(o.el.style.left)));
+    const offset = rightMostX + size - left; // 현재 요소를 오른쪽 기준으로 맞추기
+    if (left + size + 2 <= area.width && !isBlocked(left+2, top)) { 
+      left += 2; 
+      moved = true;
+    } else if (type === 'apple') rotateGravity();
+  }
+
+  el.style.top = top + 'px';
+  el.style.left = left + 'px';
+
+  if (moved) requestAnimationFrame(step);
   }
   step();
 }
