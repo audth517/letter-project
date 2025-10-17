@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
+<meta charset="UTF-8" />
 <title>Inception</title>
 <style>
   body {
@@ -11,7 +11,6 @@
     font-family: 'Courier New', monospace;
     color: #413e3e;
   }
-
   #title {
     position: absolute;
     top: 60px;
@@ -19,7 +18,6 @@
     font-size: 24px;
     font-weight: bold;
   }
-
   #description {
     position: absolute;
     top: 95px;
@@ -27,7 +25,6 @@
     white-space: pre-line;
     line-height: 1.5em;
   }
-
   #typing-area {
     position: absolute;
     top: 270px;
@@ -42,31 +39,25 @@
     cursor: text;
     outline: none;
   }
-
   .letter, .apple, .temp {
     position: absolute;
     font-family: 'Courier New', monospace;
     color: #413e3e;
     user-select: none;
-    letter-spacing: -1.3px; /* 자간 줄이기 */
+    letter-spacing: -1.3px;
   }
-
   .apple {
     width: 30px;
     height: 30px;
   }
-
   .temp {
     opacity: 0.5;
   }
-
   #cursor {
     position: absolute;
     width: 6px;
     background-color: #404e3e;
-    /* 초기에는 깜빡이지 않음, 클릭 시 애니메이션 추가 */
   }
-
   @keyframes blink {
     0%, 50% { opacity: 1; }
     50.1%, 100% { opacity: 0; }
@@ -93,10 +84,16 @@ const cursorEl = document.getElementById('cursor');
 let gravity = 'down';
 let elements = [];
 let currentInput = [];
-let cursor = {x: 10, y: 10};
+let cursor = {x: 10, y:10};
 const letterSize = 20;
 const appleSize = 30;
 const gravityOrder = ['down', 'left', 'up', 'right'];
+
+// 그룹 단어 배열 관리 (예: 현재는 한 단어 단위 그룹)
+function getGroupByElement(el) {
+  // 간단 예: 한 글자씩 개별 그룹 처리 (사용자 필요에 따라 수정)
+  return elements.filter(obj => obj.type === 'letter');
+}
 
 // 커서 위치 업데이트
 function updateCursor() {
@@ -105,7 +102,7 @@ function updateCursor() {
   cursorEl.style.height = letterSize + 'px';
 }
 
-// 클릭 시 타이핑 시작 위치 설정 및 깜빡임 시작
+// 클릭 시 커서 위치 설정 및 깜빡임 활성화
 typingArea.addEventListener('click', (e) => {
   const rect = typingArea.getBoundingClientRect();
   cursor.x = e.clientX - rect.left;
@@ -115,7 +112,7 @@ typingArea.addEventListener('click', (e) => {
   cursorEl.style.animation = "blink 1s step-start infinite";
 });
 
-// 임시 글자/사과 표시 함수 (좌표 저장)
+// 임시 글자 표시
 function createTempChar(char, x, y) {
   const temp = document.createElement('span');
   temp.className = 'letter temp';
@@ -134,7 +131,7 @@ function createLetterAt(char, x, y) {
   el.style.left = x + 'px';
   el.style.top = y + 'px';
   typingArea.appendChild(el);
-  elements.push({el, type:'letter'});
+  elements.push({el, type: 'letter'});
   moveElement(el, 'letter');
 }
 
@@ -146,123 +143,96 @@ function createAppleAt(x, y) {
   el.style.left = x + 'px';
   el.style.top = y + 'px';
   typingArea.appendChild(el);
-  elements.push({el, type:'apple'});
+  elements.push({el, type: 'apple'});
   moveElement(el, 'apple');
 }
 
-// 충돌 체크 및 이동
+// 충돌 체크
+function isBlocked(nextX, nextY, excludeEl = null) {
+  for (let obj of elements) {
+    if (obj.el === excludeEl) continue;
+    const ox = parseFloat(obj.el.style.left);
+    const oy = parseFloat(obj.el.style.top);
+    const osize = obj.type === 'letter' ? letterSize : appleSize;
+    if (nextX < ox + osize && nextX + letterSize > ox &&
+        nextY < oy + osize && nextY + letterSize > oy) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// 그룹 전체를 오른쪽으로 이동
+function moveGroupToRight(group) {
+  const area = typingArea.getBoundingClientRect();
+  let canMove = true;
+
+  while (canMove) {
+    for (let obj of group) {
+      const nextLeft = parseFloat(obj.el.style.left) + 2;
+      if (nextLeft + letterSize > area.width || isBlocked(nextLeft, parseFloat(obj.el.style.top), obj.el)) {
+        canMove = false;
+        break;
+      }
+    }
+    if (canMove) {
+      group.forEach(obj => {
+        obj.el.style.left = (parseFloat(obj.el.style.left) + 2) + 'px';
+      });
+    }
+  }
+}
+
+// 요소 이동 함수 (그룹 지원 확장)
 function moveElement(el, type) {
   const area = typingArea.getBoundingClientRect();
   let top = parseFloat(el.style.top);
   let left = parseFloat(el.style.left);
   const size = type === 'letter' ? letterSize : appleSize;
 
-  function isBlocked(nextX, nextY) {
-    for (let obj of elements) {
-      if (obj.el === el) continue;
-      const ox = parseFloat(obj.el.style.left);
-      const oy = parseFloat(obj.el.style.top);
-      const osize = obj.type === 'letter' ? letterSize : appleSize;
-      if (nextX < ox + osize && nextX + size > ox &&
-          nextY < oy + osize && nextY + size > oy) {
-        return true;
-      }
-    }
-    return false;
-  }
-
   function step() {
     let moved = false;
-    if (gravity === 'down') {
-      if (top + size + 2 <= area.height && !isBlocked(left, top+2)) { top += 2; moved = true; }
-      else if (type === 'apple') rotateGravity();
-    } else if (gravity === 'left') {
-      if (left - 2 >= 0 && !isBlocked(left-2, top)) { left -= 2; moved = true; }
-      else if (type === 'apple') rotateGravity();
-    } else if (gravity === 'up') {
-      if (top - 2 >= 0 && !isBlocked(left, top-2)) { top -= 2; moved = true; }
-      else if (type === 'apple') rotateGravity();
-    } else if (gravity === 'right') {
-      // 오른쪽으로 그룹 전체 이동 함수
-      function moveGroupToRight(group) {
-        const area = typingArea.getBoundingClientRect();
-        let canMove = true;
-    
-        // 오른쪽 끝 또는 장애물에 닿을 때까지 반복
-        while (canMove) {
-          for (let obj of group) {
-            const nextLeft = parseFloat(obj.el.style.left) + 2;
-            const size = letterSize;
-            // 오른쪽 벽 체크 및 다른 글자 충돌 체크
-            if (
-              nextLeft + size > area.width ||
-              isBlocked(nextLeft, parseFloat(obj.el.style.top), obj.el)
-            ) {
-              canMove = false;
-              break;
-            }
-          }
-          // 모두 통과 시 모든 글자 위치 업데이트
-          if (canMove) {
-            group.forEach(obj => {
-              obj.el.style.left = (parseFloat(obj.el.style.left) + 2) + 'px';
-            });
-          }
-        }
-      }
-    
-      // moveElement 함수 예시 (group 인자 추가 필요)
-      function moveElement(el, type, group) {
-        const area = typingArea.getBoundingClientRect();
-        let top = parseFloat(el.style.top);
-        let left = parseFloat(el.style.left);
-        const size = type === 'letter' ? letterSize : appleSize;
-    
-        function step() {
-          let moved = false;
-    
-          if (gravity === 'down') {
-            if (top + size + 2 <= area.height && !isBlocked(left, top + 2)) {
-              top += 2;
-              moved = true;
-            } else if (type === 'apple') {
-              rotateGravity();
-            }
-          } else if (gravity === 'left') {
-            if (left - 2 >= 0 && !isBlocked(left - 2, top)) {
-              left -= 2;
-              moved = true;
-            } else if (type === 'apple') {
-              rotateGravity();
-            }
-          } else if (gravity === 'up') {
-            if (top - 2 >= 0 && !isBlocked(left, top - 2)) {
-              top -= 2;
-              moved = true;
-            } else if (type === 'apple') {
-              rotateGravity();
-            }
-          } else if (gravity === 'right') {
-            // 오른쪽 중력 시 그룹 단위로 이동 처리
-            moveGroupToRight(group);
-            return; // 그룹 이동 함수에서 이미 이동 완료
-          }
-    
-          el.style.top = top + 'px';
-          el.style.left = left + 'px';
-    
-          if (moved) {
-            requestAnimationFrame(step);
-          }
-        }
-    
-        step();
-      }
 
+    if (gravity === 'down') {
+      if (top + size + 2 <= area.height && !isBlocked(left, top + 2, el)) {
+        top += 2;
+        moved = true;
+      } else if (type === 'apple') {
+        rotateGravity();
+      }
+    } else if (gravity === 'left') {
+      if (left - 2 >= 0 && !isBlocked(left -2, top, el)) {
+        left -= 2;
+        moved = true;
+      } else if (type === 'apple') {
+        rotateGravity();
+      }
+    } else if (gravity === 'up') {
+      if (top - 2 >= 0 && !isBlocked(left, top - 2, el)) {
+        top -= 2;
+        moved = true;
+      } else if (type === 'apple') {
+        rotateGravity();
+      }
+    } else if (gravity === 'right') {
+      // 오른쪽 중력 시 그룹 단위 이동
+      let group = getGroupByElement(el);
+      moveGroupToRight(group);
+      return;
+    }
+
+    el.style.top = top + 'px';
+    el.style.left = left + 'px';
+
+    if (moved) requestAnimationFrame(step);
+  }
+
+  step();
+}
 
 // 중력 회전
 function rotateGravity() {
-  gravity = gravityOrder[(gravityOrder.indexOf(gravity) + 1) % 4];
+  gravity = gravityOrder[(gravityOrder.indexOf(gravity) + 1) % gravityOrder.length];
 }
 
 // 키 입력 처리
@@ -278,7 +248,7 @@ typingArea.addEventListener('keydown', (e) => {
     temps.forEach(t => t.remove());
     updateCursor();
   } else if (e.key === 'Enter') {
-    if(currentInput.length === 0) return;
+    if (currentInput.length === 0) return;
     let word = currentInput.map(c => c.char).join('');
     if (word.toLowerCase() === 'apple') {
       createAppleAt(currentInput[0].x, currentInput[0].y);
@@ -294,12 +264,11 @@ typingArea.addEventListener('keydown', (e) => {
     if (currentInput.length > 0) {
       currentInput.pop();
       const spans = typingArea.querySelectorAll('.temp');
-      if (spans.length > 0) spans[spans.length -1].remove();
+      if (spans.length > 0) spans[spans.length - 1].remove();
       if (currentInput.length > 0) {
         cursor.x = currentInput[currentInput.length -1].x + letterSize;
         cursor.y = currentInput[currentInput.length -1].y;
-      }
-      else {
+      } else {
         cursor.x = 10;
         cursor.y = 10;
       }
