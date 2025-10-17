@@ -43,11 +43,12 @@
     outline: none;
   }
 
-  .letter, .apple {
+  .letter, .apple, .temp {
     position: absolute;
     font-family: 'Courier New', monospace;
     color: #413e3e;
     user-select: none;
+    letter-spacing: -1px; /* 자간 줄이기 */
   }
 
   .apple {
@@ -63,7 +64,7 @@
     position: absolute;
     width: 6px;
     background-color: #404e3e;
-    animation: blink 1s step-start infinite;
+    /* 초기에는 깜빡이지 않음 */
   }
 
   @keyframes blink {
@@ -104,13 +105,14 @@ function updateCursor() {
   cursorEl.style.height = letterSize + 'px';
 }
 
-// 클릭 시 타이핑 시작 위치 설정
+// 클릭 시 타이핑 시작 위치 설정 및 깜빡임 시작
 typingArea.addEventListener('click', (e) => {
   const rect = typingArea.getBoundingClientRect();
   cursor.x = e.clientX - rect.left;
   cursor.y = e.clientY - rect.top;
   updateCursor();
   typingArea.focus();
+  cursorEl.style.animation = "blink 1s step-start infinite";
 });
 
 // 임시 글자/사과 표시 함수
@@ -211,11 +213,15 @@ typingArea.addEventListener('keydown', (e) => {
   } else if (e.key === 'Enter') {
     let x = cursor.x;
     let y = cursor.y;
-    currentInput.forEach(char => {
-      if (char.toLowerCase() === 'apple') createAppleAt(x, y);
-      else createLetterAt(char, x, y);
-      x += (char.toLowerCase() === 'apple' ? appleSize : letterSize);
-    });
+    let word = currentInput.join('');
+    if (word.toLowerCase() === 'apple') {
+      createAppleAt(x, y);
+    } else {
+      currentInput.forEach(char => {
+        createLetterAt(char, x, y);
+        x += letterSize;
+      });
+    }
     currentInput = [];
     // 임시 글자 제거
     const temps = typingArea.querySelectorAll('.temp');
