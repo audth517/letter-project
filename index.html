@@ -7,14 +7,14 @@
   body {
     margin: 0;
     padding: 0;
-    background-color: #e7e1dd;
+    background-color: #e6e4e3;
     font-family: 'Courier New', monospace;
     color: #413e3e;
   }
 
   #title {
     position: absolute;
-    top: 20px;
+    top: 35px; /* 기존 20px + 15px */
     left: 30px;
     font-size: 24px;
     font-weight: bold;
@@ -22,22 +22,25 @@
 
   #description {
     position: absolute;
-    top: 60px;
+    top: 75px; /* 기존 60px + 15px */
     left: 30px;
     white-space: pre-line;
+    line-height: 1.8em; /* 문장간 띄움 */
   }
 
   #typing-area {
     position: absolute;
-    top: 160px;
+    top: 195px; /* 기존 160px + 35px(위 여백 + 추가) */
     left: 30px;
     right: 30px;
     bottom: 30px;
-    border: 1.2pt solid #413e3e;
-    box-shadow: 6.7px 6.7px 0px #bcb9b7;
-    background-color: #e7e1dd;
+    border: 1.2pt solid #dbd7d4;
+    border-radius: 8px;
+    box-shadow: 4px 4px 15px rgba(188, 185, 183, 0.6);
+    background-color: #e6e4e3;
     overflow: hidden;
     cursor: text;
+    outline: none;
   }
 
   .letter, .apple {
@@ -51,6 +54,19 @@
     width: 30px;
     height: 30px;
   }
+
+  /* 깜빡이는 커서 */
+  #cursor {
+    position: absolute;
+    width: 2px;
+    background-color: #404e3e;
+    animation: blink 1s step-start infinite;
+  }
+
+  @keyframes blink {
+    0%, 50% { opacity: 1; }
+    50.1%, 100% { opacity: 0; }
+  }
 </style>
 </head>
 <body>
@@ -58,6 +74,7 @@
 <div id="title">Inception</div>
 <div id="description">
 This project is inspired by Inception and Newton’s apple. The rules are as follows:
+
 1 You can type any letters or numbers.
 2 Place the cursor anywhere, type, and then press Enter.
 3 Type “Apple” or “apple” and observe what happens.
@@ -65,21 +82,29 @@ This project is inspired by Inception and Newton’s apple. The rules are as fol
 </div>
 
 <div id="typing-area" tabindex="0"></div>
+<div id="cursor"></div>
 
 <script>
 const typingArea = document.getElementById('typing-area');
+const cursorEl = document.getElementById('cursor');
 let gravity = 'down';
-let elements = []; // 글자 및 사과 요소
-let cursor = {x: 10, y: 10}; // 초기 입력 위치
-const letterSize = 20; // 글자 높이/너비 approximation
+let elements = [];
+let cursor = {x: 10, y: 10};
+const letterSize = 20;
 const appleSize = 30;
-
 const gravityOrder = ['down', 'left', 'up', 'right'];
+
+function updateCursor() {
+  cursorEl.style.left = (typingArea.offsetLeft + cursor.x) + 'px';
+  cursorEl.style.top = (typingArea.offsetTop + cursor.y) + 'px';
+  cursorEl.style.height = letterSize + 'px';
+}
 
 typingArea.addEventListener('click', (e) => {
   const rect = typingArea.getBoundingClientRect();
   cursor.x = e.clientX - rect.left;
   cursor.y = e.clientY - rect.top;
+  updateCursor();
   typingArea.focus();
 });
 
@@ -162,9 +187,14 @@ typingArea.addEventListener('keydown', (e) => {
     if (text.toLowerCase() === 'apple') createApple();
     else for (let char of text) createLetter(char);
     typingArea.textContent = '';
-  } 
+    updateCursor();
+  } else if (e.key.length === 1) {
+    typingArea.textContent += e.key;
+  }
+  updateCursor();
 });
 
+updateCursor();
 typingArea.focus();
 </script>
 
