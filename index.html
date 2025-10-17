@@ -25,7 +25,7 @@
     top: 90px;
     left: 40px;
     white-space: pre-line;
-    line-height: 1.5em;
+    line-height: 1.8em;
   }
 
   #typing-area {
@@ -48,7 +48,7 @@
     font-family: 'Courier New', monospace;
     color: #413e3e;
     user-select: none;
-    letter-spacing: -1px; /* 자간 줄이기 */
+    letter-spacing: -1px;
   }
 
   .apple {
@@ -64,7 +64,6 @@
     position: absolute;
     width: 6px;
     background-color: #404e3e;
-    /* 초기에는 깜빡이지 않음, 클릭 시 애니메이션 추가 */
   }
 
   @keyframes blink {
@@ -98,14 +97,12 @@ const letterSize = 20;
 const appleSize = 30;
 const gravityOrder = ['down', 'left', 'up', 'right'];
 
-// 커서 위치 업데이트
 function updateCursor() {
   cursorEl.style.left = (typingArea.offsetLeft + cursor.x) + 'px';
   cursorEl.style.top = (typingArea.offsetTop + cursor.y) + 'px';
   cursorEl.style.height = letterSize + 'px';
 }
 
-// 클릭 시 타이핑 시작 위치 설정 및 깜빡임 시작
 typingArea.addEventListener('click', (e) => {
   const rect = typingArea.getBoundingClientRect();
   cursor.x = e.clientX - rect.left;
@@ -115,7 +112,6 @@ typingArea.addEventListener('click', (e) => {
   cursorEl.style.animation = "blink 1s step-start infinite";
 });
 
-// 임시 글자/사과 표시 함수 (좌표 저장)
 function createTempChar(char, x, y) {
   const temp = document.createElement('span');
   temp.className = 'letter temp';
@@ -126,7 +122,6 @@ function createTempChar(char, x, y) {
   return {char, x, y};
 }
 
-// 실제 글자 생성
 function createLetterAt(char, x, y) {
   const el = document.createElement('span');
   el.className = 'letter';
@@ -138,7 +133,6 @@ function createLetterAt(char, x, y) {
   moveElement(el, 'letter');
 }
 
-// 실제 사과 생성
 function createAppleAt(x, y) {
   const el = document.createElement('img');
   el.src = 'apple.png';
@@ -150,12 +144,14 @@ function createAppleAt(x, y) {
   moveElement(el, 'apple');
 }
 
-// 충돌 체크 및 이동
+function rotateGravity() {
+  gravity = gravityOrder[(gravityOrder.indexOf(gravity) + 1) % 4];
+}
+
 function moveElement(el, type) {
   const area = typingArea.getBoundingClientRect();
   let top = parseFloat(el.style.top);
   let left = parseFloat(el.style.left);
-  const size = type === 'letter' ? letterSize : appleSize;
 
   function isBlocked(nextX, nextY) {
     for (let obj of elements) {
@@ -163,8 +159,8 @@ function moveElement(el, type) {
       const ox = parseFloat(obj.el.style.left);
       const oy = parseFloat(obj.el.style.top);
       const osize = obj.type === 'letter' ? letterSize : appleSize;
-      if (nextX < ox + osize && nextX + size > ox &&
-          nextY < oy + osize && nextY + size > oy) {
+      if (nextX < ox + osize && nextX + (type==='letter'?letterSize:appleSize) > ox &&
+          nextY < oy + osize && nextY + (type==='letter'?letterSize:appleSize) > oy) {
         return true;
       }
     }
@@ -173,8 +169,9 @@ function moveElement(el, type) {
 
   function step() {
     let moved = false;
+
     if (gravity === 'down') {
-      if (top + size + 2 <= area.height && !isBlocked(left, top+2)) { top += 2; moved = true; }
+      if (top + (type==='letter'?letterSize:appleSize) + 2 <= area.height && !isBlocked(left, top+2)) { top += 2; moved = true; }
       else if (type === 'apple') rotateGravity();
     } else if (gravity === 'left') {
       if (left - 2 >= 0 && !isBlocked(left-2, top)) { left -= 2; moved = true; }
@@ -183,22 +180,33 @@ function moveElement(el, type) {
       if (top - 2 >= 0 && !isBlocked(left, top-2)) { top -= 2; moved = true; }
       else if (type === 'apple') rotateGravity();
     } else if (gravity === 'right') {
-      if (left + size + 2 <= area.width && !isBlocked(left+2, top)) { left += 2; moved = true; }
-      else if (type === 'apple') rotateGravity();
+      if (type === 'letter') {
+        // 글자 전체 그룹을 오른쪽으로 이동
+        let group = elements.filter(o => o.type==='letter');
+        let canMove = group.every(o => (parseFloat(o.el.style.left) + letterSize + 2 <= area.width) && !isBlocked(parseFloat(o.el.style.left)+2, parseFloat(o.el.style.top)));
+        if (canMove) {
+          group.forEach(o => {
+            o.el.style.left = parseFloat(o.el.style.left) + 2 + 'px';
+          });
+          moved = true;
+        }
+      } else {
+        if (left + size + 2 <= area.width && !isBlocked(left+2, top)) { left += 2; moved = true; }
+        else if (type === 'apple') rotateGravity();
+      }
     }
-    el.style.top = top + 'px';
-    el.style.left = left + 'px';
+
+    if (gravity !== 'right' || type !== 'letter') {
+      el.style.top = top + 'px';
+      el.style.left = left + 'px';
+    }
+
     if (moved) requestAnimationFrame(step);
   }
+
   step();
 }
 
-// 중력 회전
-function rotateGravity() {
-  gravity = gravityOrder[(gravityOrder.indexOf(gravity) + 1) % 4];
-}
-
-// 키 입력 처리
 typingArea.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     elements.forEach(o => o.el.remove());
@@ -231,8 +239,7 @@ typingArea.addEventListener('keydown', (e) => {
       if (currentInput.length > 0) {
         cursor.x = currentInput[currentInput.length -1].x + letterSize;
         cursor.y = currentInput[currentInput.length -1].y;
-      }
-      else {
+      } else {
         cursor.x = 10;
         cursor.y = 10;
       }
