@@ -14,26 +14,26 @@
 
   #title {
     position: absolute;
-    top: 55px;
-    left: 40px;
+    top: 60px;
+    left: 50px;
     font-size: 24px;
     font-weight: bold;
   }
 
   #description {
     position: absolute;
-    top: 90px;
-    left: 40px;
+    top: 87px;
+    left: 50px;
     white-space: pre-line;
-    line-height: 1.8em;
+    line-height: 1.6em;
   }
 
   #typing-area {
     position: absolute;
     top: 270px;
-    left: 40px;
-    right: 40px;
-    bottom: 40px;
+    left: 50px;
+    right: 50px;
+    bottom: 50px;
     border: 1.2pt solid #dbd7d4;
     border-radius: 9px;
     box-shadow: 6px 6px 17px rgba(188, 185, 183, 0.6);
@@ -79,7 +79,7 @@
 This project is inspired by the film 'Inception' and Newton’s apple. The rules are as follows:
 1. You can type any letters or numbers.
 2. Place the cursor anywhere, type, and then press Enter.
-3. Type “Apple” or “apple” and observe what happens.
+3. Type "Apple" or "apple" and observe what happens.
 4. Press Esc to reset.
 </div>
 
@@ -181,29 +181,34 @@ function moveElement(el, type) {
       else if (type === 'apple') rotateGravity();
     } else if (gravity === 'right') {
       if (type === 'letter') {
-        // 글자 전체 그룹을 오른쪽으로 이동
         let group = elements.filter(o => o.type==='letter');
-        let canMove = group.every(o => (parseFloat(o.el.style.left) + letterSize + 2 <= area.width) && !isBlocked(parseFloat(o.el.style.left)+2, parseFloat(o.el.style.top)));
+    // 그룹 내부 글자는 충돌 체크 제외
+        let canMove = group.every(o => {
+          let nextX = parseFloat(o.el.style.left) + 2;
+          return nextX + letterSize <= area.width &&
+            !elements.some(obj => {
+              if (obj.type!=='letter') return false;
+              if (group.includes(obj)) return false; // 그룹 내부는 제외
+              let ox = parseFloat(obj.el.style.left);
+              let oy = parseFloat(obj.el.style.top);
+              return nextX < ox + letterSize && nextX + letterSize > ox &&
+                     parseFloat(o.el.style.top) < oy + letterSize && parseFloat(o.el.style.top) + letterSize > oy;
+            });
+        });
+
         if (canMove) {
           group.forEach(o => {
-            o.el.style.left = parseFloat(o.el.style.left) + 2 + 'px';
+            o.el.style.left = (parseFloat(o.el.style.left) + 2) + 'px';
           });
           moved = true;
         }
       } else {
-        if (left + size + 2 <= area.width && !isBlocked(left+2, top)) { left += 2; moved = true; }
-        else if (type === 'apple') rotateGravity();
+        if (left + size + 2 <= area.width && !isBlocked(left+2, top)) {
+          left += 2; moved = true;
+        } else if (type === 'apple') rotateGravity();
       }
     }
-
-    if (gravity !== 'right' || type !== 'letter') {
-      el.style.top = top + 'px';
-      el.style.left = left + 'px';
-    }
-
-    if (moved) requestAnimationFrame(step);
-  }
-
+  
   step();
 }
 
