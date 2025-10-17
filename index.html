@@ -2,168 +2,171 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Inception</title>
+<title>Letter Project</title>
 <style>
   body {
     margin: 0;
-    height: 100vh;
+    padding: 0;
+    background-color: #e7e1dd;
     font-family: 'Courier New', monospace;
-    background: linear-gradient(to bottom, #efe5dd, #d0c8c2);
-    color: #403d3c;
+    color: #413e3e;
+  }
+
+  #title {
+    position: absolute;
+    top: 20px;
+    left: 30px;
+    font-size: 24px;
+    font-weight: bold;
+  }
+
+  #description {
+    position: absolute;
+    top: 60px;
+    left: 30px;
+    white-space: pre-line;
+  }
+
+  #typing-area {
+    position: absolute;
+    top: 160px;
+    left: 30px;
+    right: 30px;
+    bottom: 30px;
+    border: 1.2pt solid #413e3e;
+    box-shadow: 6.7px 6.7px 0px #bcb9b7;
+    background-color: #e7e1dd;
     overflow: hidden;
+    cursor: text;
+  }
+
+  .letter, .apple {
+    position: absolute;
+    font-family: 'Courier New', monospace;
+    color: #413e3e;
     user-select: none;
   }
-  #bar {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 40px;
-    border-bottom: 1px solid #403d3c;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 10px;
-    box-sizing: border-box;
-  }
-  #bar-center {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-  }
-  #canvas {
-    position: absolute;
-    top: 40px;
-    left: 0;
-    width: 100%;
-    height: calc(100% - 40px);
-  }
-  .text-item {
-    position: absolute;
-    white-space: pre;
-  }
-  .cursor {
-    display: inline-block;
-    width: 6px;
-    background-color: #585554;
-    animation: blink 1s steps(1) infinite;
-  }
-  @keyframes blink {
-    0%, 50% { opacity: 1; }
-    50.01%, 100% { opacity: 0; }
+
+  .apple {
+    width: 30px;
+    height: 30px;
   }
 </style>
 </head>
 <body>
-  <div id="bar">
-    <div id="bar-left">Esc</div>
-    <div id="bar-center">Apple</div>
-    <div id="bar-right">Enter</div>
-  </div>
-  <div id="canvas" tabindex="0"></div>
+
+<div id="title">Inception</div>
+<div id="description">
+This project is inspired by Inception and Newton’s apple. The rules are as follows:
+1 You can type any letters or numbers.
+2 Place the cursor anywhere, type, and then press Enter.
+3 Type “Apple” or “apple” and observe what happens.
+4 Press Esc to reset.
+</div>
+
+<div id="typing-area" tabindex="0"></div>
 
 <script>
-  const canvas = document.getElementById('canvas');
-  let gravity = 'down';
-  let typedText = '';
-  let typingPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-  let typingSpan = null;
-  let cursorSpan = null;
-  let textElements = [];
-  
-  function rotateGravity() {
-    const dirs = ['down', 'left', 'up', 'right'];
-    gravity = dirs[(dirs.indexOf(gravity) + 1) % 4];
+const typingArea = document.getElementById('typing-area');
+let gravity = 'down';
+let elements = []; // 글자 및 사과 요소
+let cursor = {x: 10, y: 10}; // 초기 입력 위치
+const letterSize = 20; // 글자 높이/너비 approximation
+const appleSize = 30;
+
+const gravityOrder = ['down', 'left', 'up', 'right'];
+
+typingArea.addEventListener('click', (e) => {
+  const rect = typingArea.getBoundingClientRect();
+  cursor.x = e.clientX - rect.left;
+  cursor.y = e.clientY - rect.top;
+  typingArea.focus();
+});
+
+function createLetter(char) {
+  const el = document.createElement('span');
+  el.className = 'letter';
+  el.textContent = char;
+  el.style.left = cursor.x + 'px';
+  el.style.top = cursor.y + 'px';
+  typingArea.appendChild(el);
+  elements.push({el, type:'letter'});
+  moveElement(el, 'letter');
+}
+
+function createApple() {
+  const el = document.createElement('img');
+  el.src = 'apple.png';
+  el.className = 'apple';
+  el.style.left = cursor.x + 'px';
+  el.style.top = cursor.y + 'px';
+  typingArea.appendChild(el);
+  elements.push({el, type:'apple'});
+  moveElement(el, 'apple');
+}
+
+function moveElement(el, type) {
+  const area = typingArea.getBoundingClientRect();
+  let top = parseFloat(el.style.top);
+  let left = parseFloat(el.style.left);
+  const size = type === 'letter' ? letterSize : appleSize;
+
+  function isBlocked(nextX, nextY) {
+    for (let obj of elements) {
+      if (obj.el === el) continue;
+      const ox = parseFloat(obj.el.style.left);
+      const oy = parseFloat(obj.el.style.top);
+      const osize = obj.type === 'letter' ? letterSize : appleSize;
+      if (nextX < ox + osize && nextX + size > ox &&
+          nextY < oy + osize && nextY + size > oy) {
+        return true;
+      }
+    }
+    return false;
   }
 
-  canvas.addEventListener('click', (e) => {
-    if (typingSpan) typingSpan.remove();
-    typedText = '';
-
-    typingPosition.x = e.clientX;
-    typingPosition.y = e.clientY - canvas.offsetTop;
-
-    typingSpan = document.createElement('span');
-    typingSpan.className = 'text-item';
-    typingSpan.style.left = typingPosition.x + 'px';
-    typingSpan.style.top = typingPosition.y + 'px';
-
-    cursorSpan = document.createElement('span');
-    cursorSpan.className = 'cursor';
-    cursorSpan.textContent = ' ';
-
-    typingSpan.appendChild(cursorSpan);
-    canvas.appendChild(typingSpan);
-    canvas.focus();
-  });
-
-  function applyGravity(el) {
-    const step = 6;
-    const interval = setInterval(() => {
-      const rect = el.getBoundingClientRect();
-      if (gravity === 'down' && rect.bottom < window.innerHeight - step) {
-        el.style.top = rect.top + step + 'px';
-      } else if (gravity === 'up' && rect.top > 0) {
-        el.style.top = Math.max(0, el.offsetTop - step) + 'px';
-      } else if (gravity === 'left' && rect.left > 0) {
-        el.style.left = Math.max(0, el.offsetLeft - step) + 'px';
-      } else if (gravity === 'right' && rect.right < window.innerWidth) {
-        el.style.left = Math.min(window.innerWidth - rect.width, el.offsetLeft + step) + 'px';
-      } else {
-        clearInterval(interval);
-      }
-    }, 10);
+  function step() {
+    let moved = false;
+    if (gravity === 'down') {
+      if (top + size + 2 <= area.height && !isBlocked(left, top+2)) { top += 2; moved = true; }
+      else if (type === 'apple') rotateGravity();
+    } else if (gravity === 'left') {
+      if (left - 2 >= 0 && !isBlocked(left-2, top)) { left -= 2; moved = true; }
+      else if (type === 'apple') rotateGravity();
+    } else if (gravity === 'up') {
+      if (top - 2 >= 0 && !isBlocked(left, top-2)) { top -= 2; moved = true; }
+      else if (type === 'apple') rotateGravity();
+    } else if (gravity === 'right') {
+      if (left + size + 2 <= area.width && !isBlocked(left+2, top)) { left += 2; moved = true; }
+      else if (type === 'apple') rotateGravity();
+    }
+    el.style.top = top + 'px';
+    el.style.left = left + 'px';
+    if (moved) requestAnimationFrame(step);
   }
+  step();
+}
 
-  canvas.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      textElements.forEach(el => el.remove());
-      if (typingSpan) typingSpan.remove();
-      textElements = [];
-      gravity = 'down';
-      typedText = '';
-      typingSpan = null;
-      return;
-    }
+function rotateGravity() {
+  gravity = gravityOrder[(gravityOrder.indexOf(gravity) + 1) % 4];
+}
 
-    if (!typingSpan) return;
+typingArea.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    elements.forEach(o => o.el.remove());
+    elements = [];
+    gravity = 'down';
+  } else if (e.key === 'Enter') {
+    const text = typingArea.textContent.trim();
+    if (!text) return;
+    if (text.toLowerCase() === 'apple') createApple();
+    else for (let char of text) createLetter(char);
+    typingArea.textContent = '';
+  } 
+});
 
-    if (e.key === 'Backspace') {
-      typedText = typedText.slice(0, -1);
-      typingSpan.textContent = typedText;
-      typingSpan.appendChild(cursorSpan);
-      e.preventDefault();
-      return;
-    }
-
-    if (e.key === 'Enter') {
-
-      if (typedText.toLowerCase() === 'apple') {
-        rotateGravity();
-        textElements.forEach(el => applyGravity(el));
-      } else if (typedText.length > 0) {
-        const finished = document.createElement('span');
-        finished.className = 'text-item';
-        finished.textContent = typedText;
-        finished.style.left = typingSpan.style.left;
-        finished.style.top = typingSpan.style.top;
-        canvas.appendChild(finished);
-        textElements.push(finished);
-        applyGravity(finished);
-      }
-      typingSpan.remove();
-      typingSpan = null;
-      typedText = '';
-      e.preventDefault();
-      return;
-    }
-
-    if (e.key.length === 1) {
-      typedText += e.key;
-      typingSpan.textContent = typedText;
-      typingSpan.appendChild(cursorSpan);
-    }
-  });
+typingArea.focus();
 </script>
+
 </body>
 </html>
