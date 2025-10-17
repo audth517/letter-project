@@ -210,26 +210,19 @@ typingArea.addEventListener('keydown', (e) => {
     const temps = typingArea.querySelectorAll('.temp');
     temps.forEach(t => t.remove());
     updateCursor();
-    
   } else if (e.key === 'Enter') {
     if(currentInput.length === 0) return;
     let word = currentInput.map(c => c.char).join('');
-    let x = cursor.x;
-    let y = cursor.y;
-  
     if (word.toLowerCase() === 'apple') {
-      createAppleAt(x, y);
-     } else {
-       currentInput.forEach(obj => {
-         createLetterAt(obj.char, x, y);
-         x += letterSize; // 오른쪽 중력도 순서대로 x 증가
-       });
+      createAppleAt(currentInput[0].x, currentInput[0].y);
+    } else {
+      currentInput.forEach(obj => {
+        createLetterAt(obj.char, obj.x, obj.y);
+      });
     }
-
     currentInput = [];
     const temps = typingArea.querySelectorAll('.temp');
     temps.forEach(t => t.remove());
-
   } else if (e.key === 'Backspace') {
     if (currentInput.length > 0) {
       currentInput.pop();
