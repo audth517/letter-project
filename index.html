@@ -14,29 +14,29 @@
 
   #title {
     position: absolute;
-    top: 35px; /* 기존 20px + 15px */
-    left: 30px;
+    top: 40px;
+    left: 40px;
     font-size: 24px;
     font-weight: bold;
   }
 
   #description {
     position: absolute;
-    top: 75px; /* 기존 60px + 15px */
-    left: 30px;
+    top: 70px;
+    left: 40px;
     white-space: pre-line;
-    line-height: 1.8em; /* 문장간 띄움 */
+    line-height: 1.8em;
   }
 
   #typing-area {
     position: absolute;
-    top: 195px; /* 기존 160px + 35px(위 여백 + 추가) */
-    left: 30px;
-    right: 30px;
-    bottom: 30px;
+    top: 200px;
+    left: 40px;
+    right: 40px;
+    bottom: 40px;
     border: 1.2pt solid #dbd7d4;
-    border-radius: 8px;
-    box-shadow: 4px 4px 15px rgba(188, 185, 183, 0.6);
+    border-radius: 9px;
+    box-shadow: 6px 6px 17px rgba(188, 185, 183, 0.6);
     background-color: #e6e4e3;
     overflow: hidden;
     cursor: text;
@@ -55,10 +55,9 @@
     height: 30px;
   }
 
-  /* 깜빡이는 커서 */
   #cursor {
     position: absolute;
-    width: 2px;
+    width: 6px;
     background-color: #404e3e;
     animation: blink 1s step-start infinite;
   }
@@ -74,11 +73,10 @@
 <div id="title">Inception</div>
 <div id="description">
 This project is inspired by Inception and Newton’s apple. The rules are as follows:
-
-1 You can type any letters or numbers.
-2 Place the cursor anywhere, type, and then press Enter.
-3 Type “Apple” or “apple” and observe what happens.
-4 Press Esc to reset.
+1. You can type any letters or numbers.
+2. Place the cursor anywhere, type, and then press Enter.
+3. Type “Apple” or “apple” and observe what happens.
+4. Press Esc to reset.
 </div>
 
 <div id="typing-area" tabindex="0"></div>
@@ -94,12 +92,14 @@ const letterSize = 20;
 const appleSize = 30;
 const gravityOrder = ['down', 'left', 'up', 'right'];
 
+// 커서 위치 업데이트
 function updateCursor() {
   cursorEl.style.left = (typingArea.offsetLeft + cursor.x) + 'px';
   cursorEl.style.top = (typingArea.offsetTop + cursor.y) + 'px';
   cursorEl.style.height = letterSize + 'px';
 }
 
+// 클릭 시 타이핑 시작 위치 설정
 typingArea.addEventListener('click', (e) => {
   const rect = typingArea.getBoundingClientRect();
   cursor.x = e.clientX - rect.left;
@@ -108,6 +108,7 @@ typingArea.addEventListener('click', (e) => {
   typingArea.focus();
 });
 
+// 글자/사과 생성
 function createLetter(char) {
   const el = document.createElement('span');
   el.className = 'letter';
@@ -130,6 +131,7 @@ function createApple() {
   moveElement(el, 'apple');
 }
 
+// 충돌 체크 및 이동
 function moveElement(el, type) {
   const area = typingArea.getBoundingClientRect();
   let top = parseFloat(el.style.top);
@@ -172,10 +174,12 @@ function moveElement(el, type) {
   step();
 }
 
+// 중력 회전
 function rotateGravity() {
   gravity = gravityOrder[(gravityOrder.indexOf(gravity) + 1) % 4];
 }
 
+// 키 입력 처리
 typingArea.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     elements.forEach(o => o.el.remove());
@@ -187,13 +191,14 @@ typingArea.addEventListener('keydown', (e) => {
     if (text.toLowerCase() === 'apple') createApple();
     else for (let char of text) createLetter(char);
     typingArea.textContent = '';
-    updateCursor();
   } else if (e.key.length === 1) {
+    // 클릭 위치 기준 타이핑
     typingArea.textContent += e.key;
   }
   updateCursor();
 });
 
+// 초기 커서 위치
 updateCursor();
 typingArea.focus();
 </script>
