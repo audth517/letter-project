@@ -247,23 +247,32 @@ function moveElement(el, type) {
   function step() {
     let moved = false;
     if (gravity === 'down') {
-      if (top + size + 2 <= area.height && !isBlocked(left, top+2)) { top += 2; moved = true; }
-      else if (type === 'apple') {
-        /* (1) 사과가 떨어져 멈출 때 지진 */
-        if (!el.dataset.quakeDone) { quake(); el.dataset.quakeDone = '1'; }
+      if (top + size + 2 <= area.height && !isBlocked(left, top+2)) {
+        top += 2; moved = true;
+      } else if (type === 'apple') {
+        quake();           // ⬅️ 추가: 아래쪽에서 멈춰도 지진
         rotateGravity();
       }
     } else if (gravity === 'left') {
-      if (left - 2 >= 0 && !isBlocked(left-2, top)) { left -= 2; moved = true; }
-      else if (type === 'apple') rotateGravity();
+      if (left - 2 >= 0 && !isBlocked(left-2, top)) {
+        left -= 2; moved = true;
+      } else if (type === 'apple') {
+        quake();           // ⬅️ 추가: 왼쪽에서 멈춰도 지진
+        rotateGravity();
+      }
     } else if (gravity === 'up') {
-      if (top - 2 >= 0 && !isBlocked(left, top-2)) { top -= 2; moved = true; }
-      else if (type === 'apple') rotateGravity();
+      if (top - 2 >= 0 && !isBlocked(left, top-2)) {
+        top -= 2; moved = true;
+      } else if (type === 'apple') {
+        quake();           // ⬅️ 추가: 위쪽에서 멈춰도 지진
+        rotateGravity();
+      }
     } else if (gravity === 'right') {
       if (type === 'apple') {
         if (left + size + 2 <= area.width && !isBlocked(left + 2, top)) {
           left += 2; moved = true;
         } else {
+          quake();         // ⬅️ 추가: 오른쪽에서 멈춰도 지진
           rotateGravity();
         }
       }
