@@ -22,7 +22,7 @@
 
   #description {
     position: absolute;
-    top: 210px;
+    top: 200px;
     left: 60px;
     white-space: pre-line;
     line-height: 1.5em;
@@ -64,7 +64,8 @@
     position: absolute;
     width: 6px;
     background-color: #404e3e;
-    display: none; /* 처음엔 숨김 */
+    display: none;
+    z-index: 20;
   }
 
   @keyframes blink {
@@ -72,13 +73,12 @@
     50.1%, 100% { opacity: 0; }
   }
 
-  /* 클릭 시 나타나는 힌트 */
   #hint {
     position: absolute;
     pointer-events: none;
     opacity: 0;
-    transition: opacity 0.3s ease, transform 0.3s ease;
-    z-index: 10;
+    transition: opacity 250ms ease, transform 250ms ease;
+    z-index: 15;
   }
   #hint.show {
     opacity: 0.6;
@@ -86,13 +86,13 @@
   }
   .hint-text {
     font-size: 14px;
+    letter-spacing: 0.02em;
     color: #6b6a69;
     background: rgba(255,255,255,0.5);
     padding: 4px 8px;
     border-radius: 6px;
   }
 
-  /* apple 떨어질 때 화면 흔들림 */
   @keyframes quake {
     10% { transform: translate(-3px, 0); }
     20% { transform: translate(3px, 0); }
@@ -100,22 +100,22 @@
     40% { transform: translate(2px, 0); }
     50% { transform: translate(-1px, 0); }
     60% { transform: translate(1px, 0); }
-    100% { transform: translate(0, 0); }
+    100% { transform: translate(0,0); }
   }
-  .shake {
-    animation: quake 0.4s ease-in-out;
-  }
+  .shake { animation: quake 400ms ease-in-out; }
 </style>
 </head>
 <body>
 
-<div id="title">Apple</div>
+<div id="title">"Apple"</div>
 <div id="description">
 This project is inspired by the film 'Inception' and Newton's apple. Press Esc to reset.
 </div>
 
 <div id="typing-area" tabindex="0">
-  <div id="hint"><span class="hint-text">type anywhere ⏎</span></div>
+  <div id="hint" aria-hidden="true">
+    <span class="hint-text">type anywhere<span class="enter_icon>⏎</span></span>
+  </div>       
 </div>
 <div id="cursor"></div>
 
@@ -132,16 +132,19 @@ const appleSize = 30;
 const gravityOrder = ['down', 'left', 'up', 'right'];
 let showCursor = false;
 let hintTimer = null;
+                                           
 
 function updateCursor() {
+  const areaRect = typingArea.getBoundingClientRect();
   cursorEl.style.left = (typingArea.offsetLeft + cursor.x) + 'px';
   cursorEl.style.top = (typingArea.offsetTop + cursor.y) + 'px';
   cursorEl.style.height = letterSize + 'px';
 }
 
-function showHintAt(x, y) {
-  hintEl.style.left = (x + 10) + 'px';
-  hintEl.style.top = (y - 20) + 'px';
+function showHintAt(x, y, text = 'type anywhere ⏎') {
+  hintEl.querySelector('.hint-text').innerHTML = text;
+  hintEl.style.left = (x + 8) + 'px';
+  hintEl.style.top = (y - 22) + 'px';
   hintEl.classList.add('show');
   clearTimeout(hintTimer);
   hintTimer = setTimeout(() => hintEl.classList.remove('show'), 1200);
@@ -151,14 +154,16 @@ typingArea.addEventListener('click', (e) => {
   const rect = typingArea.getBoundingClientRect();
   cursor.x = e.clientX - rect.left;
   cursor.y = e.clientY - rect.top;
-  updateCursor();
-  typingArea.focus();
 
-  if (!showCursor) {
+  if (!showCursor){
     showCursor = true;
     cursorEl.style.display = 'block';
-    cursorEl.style.animation = "blink 1s step-start infinite";
+    desc1.classList.add('reveal');
   }
+                                           
+  updateCursor();
+  typingArea.focus();
+  cursorEl.style.animation = "blink 1s step-start infinite";
 
   showHintAt(cursor.x, cursor.y);
 });
@@ -173,6 +178,7 @@ function createTempChar(char, x, y) {
   return {char, x, y};
 }
 
+// currentWordElements 배열로 그룹화된 입력 글자 요소 생성 함수
 function createLettersGroup(chars) {
   const group = [];
   for (const obj of chars) {
@@ -197,6 +203,41 @@ function createAppleAt(x, y) {
   typingArea.appendChild(el);
   elements.push({el, type:'apple'});
   moveElement(el, 'apple');
+}
+
+// 오른쪽 중력일 때 그룹 글자 동시에 오른쪽 이동
+function moveLettersGroupRight(group) {
+  const area = typingArea.getBoundingClientRect();
+  const size = letterSize;
+  let moved = false;
+
+  for (let obj of group) {
+    let left = parseFloat(obj.el.style.left);
+    let top = parseFloat(obj.el.style.top);
+
+    function isBlocked(nextX, nextY, selfEl) {
+      for (let other of elements) {
+        if (other.el === selfEl) continue;
+        const ox = parseFloat(other.el.style.left);
+        const oy = parseFloat(other.el.style.top);
+        const osize = other.type === 'letter' ? letterSize : appleSize;
+        if (nextX < ox + osize && nextX + size > ox &&
+            nextY < oy + osize && nextY + size > oy) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    if (left + size + 2 <= area.width && !isBlocked(left + 2, top, obj.el)) {
+      obj.el.style.left = (left + 2) + 'px';
+      moved = true;
+    }
+  }
+
+  if (moved) {
+    requestAnimationFrame(() => moveLettersGroupRight(group));
+  }
 }
 
 function moveElement(el, type) {
@@ -231,9 +272,14 @@ function moveElement(el, type) {
       if (top - 2 >= 0 && !isBlocked(left, top-2)) { top -= 2; moved = true; }
       else if (type === 'apple') rotateGravity();
     } else if (gravity === 'right') {
-      if (left + size + 2 <= area.width && !isBlocked(left + 2, top)) {
-        left += 2; moved = true;
-      } else if (type === 'apple') rotateGravity();
+      if (type === 'apple') {
+        if (left + size + 2 <= area.width && !isBlocked(left + 2, top)) {
+          left += 2; moved = true;
+        } else {
+          rotateGravity();
+        }
+      }
+      // letter 타입 개별 이동은 여기서 처리하지 않음
     }
     el.style.top = top + 'px';
     el.style.left = left + 'px';
@@ -244,8 +290,6 @@ function moveElement(el, type) {
 
 function rotateGravity() {
   gravity = gravityOrder[(gravityOrder.indexOf(gravity) + 1) % 4];
-  typingArea.classList.add('shake');
-  setTimeout(() => typingArea.classList.remove('shake'), 450);
 }
 
 typingArea.addEventListener('keydown', (e) => {
@@ -265,8 +309,14 @@ typingArea.addEventListener('keydown', (e) => {
     if (word.toLowerCase() === 'apple') {
       createAppleAt(currentInput[0].x, currentInput[0].y);
     } else {
+      // 그룹으로 글자 생성
       const group = createLettersGroup(currentInput);
-      group.forEach(obj => moveElement(obj.el, 'letter'));
+      if (gravity === 'right') {
+        moveLettersGroupRight(group);
+      } else {
+        // 오른쪽 중력이 아니면 개별 이동 실행
+        group.forEach(obj => moveElement(obj.el, 'letter'));
+      }
     }
     currentInput = [];
     const temps = typingArea.querySelectorAll('.temp');
