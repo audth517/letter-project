@@ -64,7 +64,7 @@
     position: absolute;
     width: 6px;
     background-color: #404e3e;
-    display: none; /* 처음엔 숨김 */
+    display: none;
   }
 
   @keyframes blink {
@@ -72,7 +72,6 @@
     50.1%, 100% { opacity: 0; }
   }
 
-  /* 힌트 스타일 */
   #hint {
     position: absolute;
     pointer-events: none;
@@ -92,7 +91,6 @@
     border-radius: 6px;
   }
 
-  /* 사과 떨어질 때 지진 효과 */
   @keyframes quake {
     10% { transform: translate(-3px, 0); }
     20% { transform: translate(3px, 0); }
@@ -102,14 +100,12 @@
     60% { transform: translate(1px, 0); }
     100% { transform: translate(0, 0); }
   }
-  .shake {
-    animation: quake 0.4s ease-in-out;
-  }
+  .shake { animation: quake 0.4s ease-in-out; }
 </style>
 </head>
 <body>
 
-<div id="title">"apple"</div>
+<div id="title">"Apple"</div>
 <div id="description">
 This project is inspired by the film 'Inception' and Newton's apple. Press Esc to reset.
 </div>
@@ -231,13 +227,9 @@ function moveElement(el, type) {
       if (top - 2 >= 0 && !isBlocked(left, top-2)) { top -= 2; moved = true; }
       else if (type === 'apple') rotateGravity();
     } else if (gravity === 'right') {
-      if (type === 'apple') {
-        if (left + size + 2 <= area.width && !isBlocked(left + 2, top)) {
-          left += 2; moved = true;
-        } else {
-          rotateGravity();
-        }
-      }
+      if (left + size + 2 <= area.width && !isBlocked(left + 2, top)) {
+        left += 2; moved = true;
+      } else if (type === 'apple') rotateGravity();
     }
     el.style.top = top + 'px';
     el.style.left = left + 'px';
@@ -246,10 +238,17 @@ function moveElement(el, type) {
   step();
 }
 
+function applyGravityAll() {
+  elements.forEach(o => {
+    if (o.type === 'letter') moveElement(o.el, 'letter');
+  });
+}
+
 function rotateGravity() {
   gravity = gravityOrder[(gravityOrder.indexOf(gravity) + 1) % 4];
   typingArea.classList.add('shake');
   setTimeout(() => typingArea.classList.remove('shake'), 400);
+  applyGravityAll();
 }
 
 typingArea.addEventListener('keydown', (e) => {
@@ -260,6 +259,7 @@ typingArea.addEventListener('keydown', (e) => {
     gravity = 'down';
     const temps = typingArea.querySelectorAll('.temp');
     temps.forEach(t => t.remove());
+    cursor.x = 10; cursor.y = 10;
     updateCursor();
   } else if (e.key === 'Enter') {
     if(currentInput.length === 0) return;
@@ -278,9 +278,15 @@ typingArea.addEventListener('keydown', (e) => {
       currentInput.pop();
       const spans = typingArea.querySelectorAll('.temp');
       if (spans.length > 0) spans[spans.length -1].remove();
+      if (currentInput.length > 0) {
+        cursor.x = currentInput[currentInput.length -1].x + letterSize;
+        cursor.y = currentInput[currentInput.length -1].y;
+      } else {
+        cursor.x = 10;
+        cursor.y = 10; // 🔹 모두 지우면 커서 원위치
+      }
+      updateCursor();
     }
-    // 글자가 다 지워져도 커서 위치 유지
-    updateCursor();
   } else if (e.key.length === 1) {
     const tempChar = createTempChar(e.key, cursor.x, cursor.y);
     currentInput.push(tempChar);
