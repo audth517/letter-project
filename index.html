@@ -101,6 +101,23 @@
     margin-left: 2px;
     animation: blink 0.8s infinite;
   }
+
+  @keyframes quake {
+    0%   { transform: translate(0, 0); }
+    10%  { transform: translate(-2px, 2px); }
+    20%  { transform: translate(2px, -2px); }
+    30%  { transform: translate(-3px, 1px); }
+    40%  { transform: translate(3px, -1px); }
+    50%  { transform: translate(-2px, 2px); }
+    60%  { transform: translate(2px, -2px); }
+    70%  { transform: translate(-1px, 1px); }
+    80%  { transform: translate(1px, -1px); }
+    90%  { transform: translate(-2px, 0); }
+    100% { transform: translate(0, 0); }
+  }
+  #typing-area.shake {
+    animation: quake 0.45s linear 1;
+  }
 </style>
 </head>
 <body>
@@ -246,6 +263,7 @@ typeTitleLoop();
       if (!buffer.trim()) return;
       if (buffer.toLowerCase() === 'apple') {
         createAppleSprite(cursorX, cursorY);
+        quake();
         cycleGravity();
       } else {
         commitBufferAsBodies(buffer, cursorX, cursorY);
@@ -261,6 +279,14 @@ typeTitleLoop();
     }
   });
 
+  function quake() {
+  typingArea.classList.remove('shake'); // 연속 트리거 대비 초기화
+  // reflow로 애니메이션 재시작 보장
+  void typingArea.offsetWidth;
+  typingArea.classList.add('shake');
+  setTimeout(() => typingArea.classList.remove('shake'), 500);
+  }
+  
   function addPreviewChar(ch) {
     const idx = previewChars.length;
     const span = document.createElement('span');
