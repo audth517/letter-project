@@ -115,7 +115,30 @@
 This project is inspired by the film 'Inception' and Newton's apple. Press Esc to reset.
 </div>
 <div id="typing-area" tabindex="0">
-  <canvas id="matter-canvas"></canvas>
+  <canvas id="matter-canvas">
+    const pixelRatio = window.devicePixelRatio || 1;
+
+    // Matter.js 생성 직전
+    const matterCanvas = document.getElementById('matter-canvas');
+    matterCanvas.width = W * pixelRatio;
+    matterCanvas.height = H * pixelRatio;
+    matterCanvas.style.width = W + 'px';
+    matterCanvas.style.height = H + 'px';
+    
+    // 아래 Render.create에 pixelRatio 옵션 추가
+    const render = Render.create({
+      element: typingArea,
+      engine,
+      canvas: matterCanvas,
+      options: {
+        width: W,
+        height: H,
+        pixelRatio: pixelRatio, // 추가!
+        wireframes: false,
+        background: 'transparent'
+      }
+    });
+  </canvas>
   <div id="typing-preview"></div>
 </div>
 <div id="cursor"></div>
@@ -260,8 +283,8 @@ typeTitleLoop();
       render: {
         sprite: {
           texture: "apple.png",
-          xScale: 30 / 1020,
-          yScale: 41 / 1384
+          xScale: 1, // apple.png의 크기가 30x41이면 1, 더 크면 비율로 맞춰 조정!
+          yScale: 1
         }
       },
       label: 'apple'
@@ -345,6 +368,7 @@ typeTitleLoop();
   Events.on(render, 'afterRender', () => {
     const ctx = render.context;
     ctx.save();
+    ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0); // 고해상도 텍스트 렌더링!
     ctx.font = '16px Courier New';
     ctx.fillStyle = '#413e3e';
     ctx.textBaseline = 'middle';
