@@ -28,6 +28,7 @@
     line-height: 1.5em;
   }
 
+  /* 반드시 유지해야 하는 typing area 디자인 */
   #typing-area {
     position: absolute;
     top: 230px;
@@ -46,8 +47,8 @@
   #cursor {
     position: absolute;
     width: 6px;
-    background-color: #404e3e;
     height: 16px;
+    background-color: #404e3e;
     display: none;
     animation: blink 0.8s infinite;
   }
@@ -89,6 +90,11 @@
     opacity: 0;
     transition: opacity 0.15s ease;
   }
+
+  .apple {
+    width: 23px;
+    height: 30px;
+  }
 </style>
 </head>
 <body>
@@ -111,7 +117,7 @@ const typingArea = document.getElementById('typing-area');
 const cursor = document.getElementById('cursor');
 const hint = document.getElementById('hint');
 
-// Matter.js 엔진 생성
+// Matter.js 기본 설정
 const engine = Engine.create();
 const world = engine.world;
 
@@ -125,7 +131,6 @@ const render = Render.create({
     background: 'transparent'
   }
 });
-
 Render.run(render);
 Runner.run(Runner.create(), engine);
 
@@ -138,7 +143,7 @@ const walls = [
 ];
 World.add(world, walls);
 
-// 초기 중력 아래로
+// 초기 중력 아래
 const gravities = [
   {x:0, y:1}, {x:-1, y:0}, {x:0, y:-1}, {x:1, y:0}
 ];
@@ -146,6 +151,12 @@ let gravityIndex = 0;
 engine.gravity.x = gravities[gravityIndex].x;
 engine.gravity.y = gravities[gravityIndex].y;
 
+// 상태 변수
+let isActive = false;
+let inputBuffer = "";
+let cursorPos = { x: typingArea.clientWidth/2, y: typingArea.clientHeight/2 };
+
+// 지진 효과
 function earthquake() {
   typingArea.classList.add('shake');
   setTimeout(()=> typingArea.classList.remove('shake'), 500);
@@ -158,52 +169,52 @@ function earthquake() {
   });
 }
 
-// 상태
-let isActive = false;
-let inputBuffer = "";
-
-// 더블 클릭 시 커서 표시 + 힌트
-typingArea.addEventListener('dblclick', (e) => {
-  isActive = true;
-  cursor.style.left = e.offsetX + 'px';
-  cursor.style.top = e.offsetY + 'px';
+// 클릭 시 커서 이동
+typingArea.addEventListener('click', (e) => {
+  const rect = typingArea.getBoundingClientRect();
+  cursorPos.x = e.clientX - rect.left;
+  cursorPos.y = e.clientY - rect.top;
+  cursor.style.left = cursorPos.x + 'px';
+  cursor.style.top = cursorPos.y + 'px';
   cursor.style.display = 'block';
+  isActive = true;
+});
 
+// 더블 클릭 시 힌트 표시
+typingArea.addEventListener('dblclick', (e) => {
   hint.style.left = (e.pageX + 10) + 'px';
   hint.style.top = (e.pageY - 20) + 'px';
   hint.style.opacity = 1;
-
   setTimeout(()=> hint.style.opacity = 0, 1200);
 });
 
-// 타이핑 입력
+// 키 입력
 document.addEventListener('keydown', (e) => {
   if (!isActive) return;
-  if (e.key === 'Escape') {
-    location.reload();
-  }
+  if (e.key === 'Escape') location.reload();
   else if (e.key === 'Enter') {
     if (inputBuffer.trim() !== "") {
-      addTextToWorld(inputBuffer);
       if (inputBuffer.toLowerCase() === "apple") {
+        createAppleImage(cursorPos.x, cursorPos.y);
         earthquake();
         gravityIndex = (gravityIndex + 1) % gravities.length;
         engine.gravity.x = gravities[gravityIndex].x;
         engine.gravity.y = gravities[gravityIndex].y;
+      } else {
+        addTextToWorld(inputBuffer, cursorPos.x, cursorPos.y);
       }
       inputBuffer = "";
     }
-  }
-  else if (e.key.length === 1) {
+  } else if (e.key.length === 1) {
     inputBuffer += e.key;
   }
 });
 
-function addTextToWorld(text) {
+// 텍스트 추가
+function addTextToWorld(text, x, y) {
   const letters = text.split('');
-  const startX = Math.random() * (typingArea.clientWidth - letters.length*20) + 40;
   letters.forEach((char, i) => {
-    const body = Bodies.rectangle(startX + i * 20, 80, 20, 20, {
+    const body = Bodies.circle(x + i * 16, y, 10, {
       restitution: 0.4,
       render: { fillStyle: '#413e3e' },
       label: char
@@ -212,13 +223,30 @@ function addTextToWorld(text) {
   });
 }
 
-// Matter.js 커스텀 렌더링 (문자 표시)
+// apple 이미지 추가
+function createAppleImage(x, y) {
+  const img = Bodies.rectangle(x, y, 23, 30, {
+    restitution: 0.5,
+    render: {
+      sprite: {
+        texture: "apple.png",
+        xScale: 1,
+        yScale: 1
+      }
+    },
+    label: 'apple'
+  });
+  World.add(world, img);
+}
+
+// 텍스트 렌더링
 (function renderText() {
   const ctx = render.context;
   const bodies = Composite.allBodies(world);
+  ctx.clearRect(0, 0, render.canvas.width, render.canvas.height);
+  Matter.Render.startViewTransform(render);
   ctx.font = '16px Courier New';
   ctx.fillStyle = '#413e3e';
-  Matter.Render.startViewTransform(render);
   bodies.forEach(body => {
     if (body.label.length === 1) {
       const pos = body.position;
