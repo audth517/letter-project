@@ -1,373 +1,149 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<title>"Apple"</title>
+<meta charset="UTF-8">
+<title>Gravity Typing</title>
 <style>
   body {
     margin: 0;
-    padding: 0;
-    background-color: #e6e4e3;
+    background: #e6e4e3;
     font-family: 'Courier New', monospace;
     color: #413e3e;
   }
-
-  #title {
-    position: absolute;
-    top: 140px;
-    left: 60px;
-    font-size: 24px;
-    font-weight: bold;
-  }
-
-  #description {
-    position: absolute;
-    top: 155px;
-    left: 60px;
-    white-space: pre-line;
-    line-height: 1.5em;
-  }
-
   #typing-area {
     position: absolute;
-    top: 230px;
-    left: 60px;
-    right: 60px;
-    bottom: 100px;
-    border: 1.2pt solid #dbd7d4;
-    border-radius: 9px;
-    box-shadow: 6px 6px 17px rgba(188, 185, 183, 0.6);
-    background-color: #e6e4e3;
+    top: 50px;
+    left: 50px;
+    width: 700px;
+    height: 500px;
+    border: 1.2pt solid #aaa;
+    border-radius: 10px;
+    box-shadow: 4px 4px 14px rgba(0,0,0,0.1);
     overflow: hidden;
-    cursor: text;
-    outline: none;
   }
-
-  .letter, .apple, .temp {
+  input {
     position: absolute;
-    font-family: 'Courier New', monospace;
-    color: #413e3e;
-    user-select: none;
-    letter-spacing: -10px;
+    bottom: 10px;
+    left: 20px;
+    width: 660px;
+    padding: 8px;
+    font-size: 16px;
   }
-
-  .apple {
-    width: 23px;
-    height: 30px;
-  }
-
-  .temp {
-    opacity: 0.5;
-  }
-
-  /* 처음에 커서 숨김 */
-  #cursor {
+  canvas {
     position: absolute;
-    width: 6px;
-    background-color: #404e3e;
-    display: none;
-  }
-
-  @keyframes blink {
-    0%, 50% { opacity: 1; }
-    50.1%, 100% { opacity: 0; }
-  }
-
-  /* 지진 효과 */
-  @keyframes quake {
-    0%   { transform: translate(0, 0); }
-    10%  { transform: translate(-2px, 2px); }
-    20%  { transform: translate(2px, -2px); }
-    30%  { transform: translate(-3px, 1px); }
-    40%  { transform: translate(3px, -1px); }
-    50%  { transform: translate(-2px, 2px); }
-    60%  { transform: translate(2px, -2px); }
-    70%  { transform: translate(-1px, 1px); }
-    80%  { transform: translate(1px, -1px); }
-    90%  { transform: translate(-2px, 0); }
-    100% { transform: translate(0, 0); }
-  }
-  #typing-area.shake {
-    animation: quake 0.45s linear 1;
-  }
-
-  /* 커서 클릭 시 뜨는 힌트 */
-  .hint {
-    position: absolute;
-    padding: 6px 10px;
-    border: 1px solid #dbd7d4;
-    border-radius: 6px;
-    background: rgba(255,255,255,0.9);
-    font-size: 12px;
-    color: #413e3e;
-    pointer-events: none;
-    white-space: nowrap;
-    box-shadow: 2px 2px 8px rgba(188,185,183,0.6);
-    opacity: 0;
-    transition: opacity 0.12s ease;
+    top: 0;
+    left: 0;
   }
 </style>
 </head>
 <body>
 
-<div id="title">"Apple"</div>
-<div id="description">
-This project is inspired by the film 'Inception' and Newton's apple. Press Esc to reset.
-</div>
+<div id="typing-area"></div>
+<input id="textInput" placeholder="Type something and press Enter...">
 
-<div id="typing-area" tabindex="0"></div>
-<div id="cursor"></div>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
 <script>
+const { Engine, Render, Runner, World, Bodies, Body, Composite } = Matter;
+
 const typingArea = document.getElementById('typing-area');
-const cursorEl = document.getElementById('cursor');
-let gravity = 'down';
-let elements = [];
-let currentInput = [];
-let cursor = {x: 10, y: 10};
-const letterSize = 18;
-const appleSize = 30;
-const gravityOrder = ['down', 'left', 'up', 'right'];
+const input = document.getElementById('textInput');
 
-function updateCursor() {
-  cursorEl.style.left = (typingArea.offsetLeft + cursor.x) + 'px';
-  cursorEl.style.top = (typingArea.offsetTop + cursor.y) + 'px';
-  cursorEl.style.height = letterSize + 'px';
-}
+// Matter.js 기본 세팅
+const engine = Engine.create();
+const world = engine.world;
 
-typingArea.addEventListener('click', (e) => {
-  const rect = typingArea.getBoundingClientRect();
-  cursor.x = e.clientX - rect.left;
-  cursor.y = e.clientY - rect.top;
-  updateCursor();
-  typingArea.focus();
-  cursorEl.style.animation = "blink 1s step-start infinite";
-  cursorEl.style.display = 'block'; // (2) 클릭 시 커서 보이기
-});
-
-/* 커서 클릭 시 힌트 표시 */
-cursorEl.addEventListener('click', (e) => {
-  e.stopPropagation();
-  const rect = typingArea.getBoundingClientRect();
-  showHint(cursor.x + rect.left + 10, cursor.y + rect.top - 28);
-});
-
-function createTempChar(char, x, y) {
-  const temp = document.createElement('span');
-  temp.className = 'letter temp';
-  temp.textContent = char;
-  temp.style.left = x + 'px';
-  temp.style.top = y + 'px';
-  typingArea.appendChild(temp);
-  return {char, x, y};
-}
-
-// currentWordElements 배열로 그룹화된 입력 글자 요소 생성 함수
-function createLettersGroup(chars) {
-  const group = [];
-  for (const obj of chars) {
-    const el = document.createElement('span');
-    el.className = 'letter';
-    el.textContent = obj.char;
-    el.style.left = obj.x + 'px';
-    el.style.top = obj.y + 'px';
-    typingArea.appendChild(el);
-    group.push({el, type: 'letter'});
-    elements.push(group[group.length - 1]);
-  }
-  return group;
-}
-
-function createAppleAt(x, y) {
-  const el = document.createElement('img');
-  el.src = 'apple.png';
-  el.className = 'apple';
-  el.style.left = x + 'px';
-  el.style.top = y + 'px';
-  typingArea.appendChild(el);
-  elements.push({el, type:'apple'});
-  moveElement(el, 'apple');
-}
-
-// 오른쪽 중력일 때 그룹 글자 동시에 오른쪽 이동
-function moveLettersGroupRight(group) {
-  const area = typingArea.getBoundingClientRect();
-  const size = letterSize;
-  let moved = false;
-
-  for (let obj of group) {
-    let left = parseFloat(obj.el.style.left);
-    let top = parseFloat(obj.el.style.top);
-
-    function isBlocked(nextX, nextY, selfEl) {
-      for (let other of elements) {
-        if (other.el === selfEl) continue;
-        const ox = parseFloat(other.el.style.left);
-        const oy = parseFloat(other.el.style.top);
-        const osize = other.type === 'letter' ? letterSize : appleSize;
-        if (nextX < ox + osize && nextX + size > ox &&
-            nextY < oy + osize && nextY + size > oy) {
-          return true;
-        }
-      }
-      return false;
-    }
-
-    if (left + size + 2 <= area.width && !isBlocked(left + 2, top, obj.el)) {
-      obj.el.style.left = (left + 2) + 'px';
-      moved = true;
-    }
-  }
-
-  if (moved) {
-    requestAnimationFrame(() => moveLettersGroupRight(group));
-  }
-}
-
-function moveElement(el, type) {
-  const area = typingArea.getBoundingClientRect();
-  let top = parseFloat(el.style.top);
-  let left = parseFloat(el.style.left);
-  const size = type === 'letter' ? letterSize : appleSize;
-
-  function isBlocked(nextX, nextY) {
-    for (let obj of elements) {
-      if (obj.el === el) continue;
-      const ox = parseFloat(obj.el.style.left);
-      const oy = parseFloat(obj.el.style.top);
-      const osize = obj.type === 'letter' ? letterSize : appleSize;
-      if (nextX < ox + osize && nextX + size > ox &&
-          nextY < oy + osize && nextY + size > oy) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  function step() {
-    let moved = false;
-    if (gravity === 'down') {
-      if (top + size + 2 <= area.height && !isBlocked(left, top+2)) {
-        top += 2; moved = true;
-      } else if (type === 'apple') {
-        quake();           
-        rotateGravity();
-      }
-    } else if (gravity === 'left') {
-      if (left - 2 >= 0 && !isBlocked(left-2, top)) {
-        left -= 2; moved = true;
-      } else if (type === 'apple') {
-        quake();           
-        rotateGravity();
-      }
-    } else if (gravity === 'up') {
-      if (top - 2 >= 0 && !isBlocked(left, top-2)) {
-        top -= 2; moved = true;
-      } else if (type === 'apple') {
-        quake();           
-        rotateGravity();
-      }
-    } else if (gravity === 'right') {
-      if (type === 'apple') {
-        if (left + size + 2 <= area.width && !isBlocked(left + 2, top)) {
-          left += 2; moved = true;
-        } else {
-          quake();        
-          rotateGravity();
-        }
-      }
-      // letter 타입 개별 이동은 여기서 처리하지 않음
-    }
-    el.style.top = top + 'px';
-    el.style.left = left + 'px';
-    if (moved) requestAnimationFrame(step);
-  }
-  step();
-}
-
-function rotateGravity() {
-  gravity = gravityOrder[(gravityOrder.indexOf(gravity) + 1) % 4];
-}
-
-/* 지진(흔들림) 트리거 */
-function quake() {
-  typingArea.classList.remove('shake'); // 연속 트리거 대비 초기화
-  // reflow로 애니메이션 재시작 보장
-  void typingArea.offsetWidth;
-  typingArea.classList.add('shake');
-  setTimeout(() => typingArea.classList.remove('shake'), 500);
-}
-
-/* 힌트 표시 유틸 */
-function showHint(pageX, pageY) {
-  const hint = document.createElement('div');
-  hint.className = 'hint';
-  hint.textContent = 'type anywhere ↵';
-  document.body.appendChild(hint);
-  hint.style.left = (pageX) + 'px';
-  hint.style.top = (pageY) + 'px';
-  requestAnimationFrame(() => { hint.style.opacity = '1'; });
-  setTimeout(() => {
-    hint.style.opacity = '0';
-    setTimeout(() => hint.remove(), 150);
-  }, 900);
-}
-
-typingArea.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    elements.forEach(o => o.el.remove());
-    elements = [];
-    currentInput = [];
-    cursor.x = 10;
-    cursor.y = 10;
-    gravity = 'down';
-    const temps = typingArea.querySelectorAll('.temp');
-    temps.forEach(t => t.remove());
-    updateCursor();
-  } else if (e.key === 'Enter') {
-    if(currentInput.length === 0) return;
-    let word = currentInput.map(c => c.char).join('');
-    if (word.toLowerCase() === 'apple') {
-      createAppleAt(currentInput[0].x, currentInput[0].y);
-    } else {
-      // 그룹으로 글자 생성
-      const group = createLettersGroup(currentInput);
-      if (gravity === 'right') {
-        moveLettersGroupRight(group);
-      } else {
-        // 오른쪽 중력이 아니면 개별 이동 실행
-        group.forEach(obj => moveElement(obj.el, 'letter'));
-      }
-    }
-    currentInput = [];
-    const temps = typingArea.querySelectorAll('.temp');
-    temps.forEach(t => t.remove());
-  } else if (e.key === 'Backspace') {
-    if (currentInput.length > 0) {
-      currentInput.pop();
-      const spans = typingArea.querySelectorAll('.temp');
-      if (spans.length > 0) spans[spans.length -1].remove();
-      if (currentInput.length > 0) {
-        cursor.x = currentInput[currentInput.length -1].x + letterSize;
-        cursor.y = currentInput[currentInput.length -1].y;
-      }
-      else {
-        cursor.x = 10;
-        cursor.y = 10;
-      }
-      updateCursor();
-    }
-  } else if (e.key.length === 1) {
-    const tempChar = createTempChar(e.key, cursor.x, cursor.y);
-    currentInput.push(tempChar);
-    cursor.x += letterSize;
-    updateCursor();
+const render = Render.create({
+  element: typingArea,
+  engine: engine,
+  options: {
+    width: 700,
+    height: 500,
+    wireframes: false,
+    background: 'transparent'
   }
 });
 
-updateCursor();
-typingArea.focus();
+Render.run(render);
+Runner.run(Runner.create(), engine);
+
+// 벽 추가
+const walls = [
+  Bodies.rectangle(350, 500, 700, 20, { isStatic: true }),
+  Bodies.rectangle(350, 0, 700, 20, { isStatic: true }),
+  Bodies.rectangle(700, 250, 20, 500, { isStatic: true }),
+  Bodies.rectangle(0, 250, 20, 500, { isStatic: true })
+];
+World.add(world, walls);
+
+// 중력 순서 (아래 → 왼쪽 → 위 → 오른쪽)
+const gravities = [
+  {x:0, y:1}, {x:-1, y:0}, {x:0, y:-1}, {x:1, y:0}
+];
+let gravityIndex = 0;
+engine.gravity.x = gravities[gravityIndex].x;
+engine.gravity.y = gravities[gravityIndex].y;
+
+// 지진 효과
+function earthquake() {
+  const bodies = Composite.allBodies(world);
+  bodies.forEach(b => {
+    Body.applyForce(b, b.position, {
+      x: (Math.random() - 0.5) * 0.2,
+      y: (Math.random() - 0.5) * 0.2
+    });
+  });
+}
+
+// 텍스트 입력 후 엔터 시 생성
+input.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+
+    // 텍스트 생성 (문자별 박스)
+    const letters = text.split('');
+    const startX = 350 - (letters.length * 10);
+    letters.forEach((char, i) => {
+      const body = Bodies.rectangle(startX + i * 20, 50, 20, 20, {
+        restitution: 0.4,
+        render: {
+          fillStyle: '#413e3e',
+          text: { content: char }
+        },
+        label: char
+      });
+      World.add(world, body);
+    });
+
+    // "apple" 입력 시 중력 변경 + 지진
+    if (text.toLowerCase() === 'apple') {
+      earthquake();
+      gravityIndex = (gravityIndex + 1) % gravities.length;
+      engine.gravity.x = gravities[gravityIndex].x;
+      engine.gravity.y = gravities[gravityIndex].y;
+    }
+  }
+});
+
+// 글자 렌더링 (Matter.js의 텍스트 지원은 없으므로 수동 렌더링)
+(function renderText() {
+  const ctx = render.context;
+  const bodies = Composite.allBodies(world);
+  ctx.font = '16px Courier New';
+  ctx.fillStyle = '#413e3e';
+
+  Matter.Render.startViewTransform(render);
+  bodies.forEach(body => {
+    if (body.label.length === 1) {
+      const pos = body.position;
+      ctx.fillText(body.label, pos.x - 5, pos.y + 5);
+    }
+  });
+  Matter.Render.endViewTransform(render);
+
+  requestAnimationFrame(renderText);
+})();
 </script>
-
 </body>
 </html>
