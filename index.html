@@ -18,6 +18,7 @@
     left: 60px;
     font-size: 24px;
     font-weight: bold;
+    white-space: pre;
   }
 
   #description {
@@ -28,7 +29,6 @@
     line-height: 1.5em;
   }
 
-  /* typing-area 스타일 — 반드시 유지 */
   #typing-area {
     position: absolute;
     top: 230px;
@@ -80,6 +80,7 @@
     top: 0;
     pointer-events: none;
   }
+
   .preview-char {
     position: absolute;
     font: 16px 'Courier New', monospace;
@@ -88,14 +89,23 @@
   }
 
   .apple {
-    width: 23px;
-    height: 30px;
+    width: 30px;
+    height: 41px;
+  }
+
+  /* title 안에서 커서 깜빡임 */
+  .title-cursor {
+    display: inline-block;
+    width: 8px;
+    background-color: #413e3e;
+    margin-left: 2px;
+    animation: blink 0.8s infinite;
   }
 </style>
 </head>
 <body>
 
-<div id="title">"Apple"</div>
+<div id="title">": "</div>
 <div id="description">
 This project is inspired by the film 'Inception' and Newton's apple. Press Esc to reset.
 </div>
@@ -108,9 +118,51 @@ This project is inspired by the film 'Inception' and Newton's apple. Press Esc t
 <div class="hint" id="hint">Type anywhere + press Enter ⏎</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+
 <script>
+// ------------------------------
+// 🍏 Title Typing Animation
+// ------------------------------
+const titleEl = document.getElementById('title');
+let step = 0;
+
+async function typeTitleLoop() {
+  while (true) {
+    titleEl.textContent = ':';
+    await blinkCursor(2);
+
+    // apple 글자 타이핑
+    const text = ' apple';
+    for (let i = 0; i < text.length; i++) {
+      titleEl.textContent = ':' + text.slice(0, i + 1);
+      await wait(150);
+    }
+
+    // 깜빡 2번 후 다시 반복
+    await blinkCursor(2, ' apple');
+  }
+}
+
+function wait(ms) {
+  return new Promise(res => setTimeout(res, ms));
+}
+
+async function blinkCursor(times = 2, after = '') {
+  for (let i = 0; i < times; i++) {
+    titleEl.innerHTML = `:${after}<span class="title-cursor"></span>`;
+    await wait(300);
+    titleEl.innerHTML = `:${after}`;
+    await wait(300);
+  }
+}
+
+typeTitleLoop();
+
+// ------------------------------
+// 🍎 기존 Matter.js 로직 (요약: typing area + gravity + apple.png)
+// ------------------------------
 (() => {
-  const { Engine, Render, Runner, World, Bodies, Body, Composite, Events } = Matter;
+  const { Engine, Render, Runner, World, Bodies, Composite, Events } = Matter;
 
   const typingArea = document.getElementById('typing-area');
   const cursorEl = document.getElementById('cursor');
@@ -131,15 +183,14 @@ This project is inspired by the film 'Inception' and Newton's apple. Press Esc t
       width: W,
       height: H,
       wireframes: false,
-      background: 'transparent',
-      pixelRatio: window.devicePixelRatio || 1
+      background: 'transparent'
     }
   });
   Render.run(render);
   const runner = Runner.create();
   Runner.run(runner, engine);
 
-  // ✅ 완전 투명한 벽 (검은 선 완전 제거)
+  // 벽을 투명하게
   const walls = [
     Bodies.rectangle(W/2, H+10, W, 20, { isStatic: true, render: { visible: false } }),
     Bodies.rectangle(W/2, -10, W, 20, { isStatic: true, render: { visible: false } }),
@@ -148,7 +199,6 @@ This project is inspired by the film 'Inception' and Newton's apple. Press Esc t
   ];
   World.add(world, walls);
 
-  // 중력 방향 순환
   const gravities = [
     {x: 0,  y: 1},
     {x: -1, y: 0},
@@ -165,7 +215,6 @@ This project is inspired by the film 'Inception' and Newton's apple. Press Esc t
   let cursorY = H / 2;
   let buffer = "";
   let previewChars = [];
-  const letterBodies = [];
   const charAdvance = 10;
 
   typingArea.addEventListener('click', (e) => {
@@ -192,19 +241,9 @@ This project is inspired by the film 'Inception' and Newton's apple. Press Esc t
     if (!active) return;
     if (e.key === 'Escape') { location.reload(); return; }
 
-    if (e.key === 'Backspace') {
-      e.preventDefault();
-      if (buffer.length > 0) {
-        buffer = buffer.slice(0, -1);
-        removeLastPreviewChar();
-      }
-      return;
-    }
-
     if (e.key === 'Enter') {
       e.preventDefault();
       if (!buffer.trim()) return;
-
       if (buffer.toLowerCase() === 'apple') {
         createAppleSprite(cursorX, cursorY);
         cycleGravity();
@@ -231,15 +270,6 @@ This project is inspired by the film 'Inception' and Newton's apple. Press Esc t
     span.style.top  = (cursorY - 10) + 'px';
     previewLayer.appendChild(span);
     previewChars.push(span);
-
-    const rect = typingArea.getBoundingClientRect();
-    cursorEl.style.left = (rect.left + cursorX + (idx + 0.8) * charAdvance) + 'px';
-    cursorEl.style.top  = (rect.top + cursorY - 9) + 'px';
-  }
-
-  function removeLastPreviewChar() {
-    const last = previewChars.pop();
-    if (last) last.remove();
   }
 
   function clearPreview() {
@@ -257,12 +287,10 @@ This project is inspired by the film 'Inception' and Newton's apple. Press Esc t
         render: { opacity: 0 },
         label: `char:${char}`
       });
-      letterBodies.push(body);
       World.add(world, body);
     });
   }
 
-  // ✅ apple.png 1020×1384 → 23×30로 축소
   function createAppleSprite(x, y) {
     const body = Bodies.rectangle(x, y, 23, 30, {
       restitution: 0.2,
@@ -271,8 +299,8 @@ This project is inspired by the film 'Inception' and Newton's apple. Press Esc t
       render: {
         sprite: {
           texture: "apple.png",
-          xScale: 23 / 1020,  // ≈ 0.02255
-          yScale: 30 / 1384   // ≈ 0.02167
+          xScale: 30 / 1020,
+          yScale: 41 / 1384
         }
       },
       label: 'apple'
