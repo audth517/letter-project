@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>: apple</title></title>
+<title>: apple</title>
 <style>
   body {
     margin: 0;
@@ -11,7 +11,6 @@
     font-family: 'Courier New', monospace;
     color: #413e3e;
   }
-
   #title {
     position: absolute;
     top: 140px;
@@ -20,7 +19,6 @@
     font-weight: bold;
     white-space: pre;
   }
-
   #description {
     position: absolute;
     top: 165px;
@@ -28,7 +26,6 @@
     white-space: pre-line;
     line-height: 1.5em;
   }
-
   #typing-area {
     position: absolute;
     top: 230px;
@@ -43,7 +40,6 @@
     cursor: text;
     outline: none;
   }
-
   #cursor {
     position: absolute;
     width: 6px;
@@ -52,13 +48,12 @@
     display: none;
     animation: blink 0.8s infinite;
     pointer-events: none;
+    z-index: 2;
   }
-
   @keyframes blink {
     0%, 50% { opacity: 1; }
     50.1%, 100% { opacity: 0; }
   }
-
   .hint {
     position: absolute;
     padding: 6px 10px;
@@ -73,27 +68,22 @@
     opacity: 0;
     transition: opacity 0.15s ease;
   }
-
   #typing-preview {
     position: absolute;
     left: 0;
     top: 0;
     pointer-events: none;
   }
-
   .preview-char {
     position: absolute;
     font: 16px 'Courier New', monospace;
     color: #413e3e;
     user-select: none;
   }
-
   .apple {
     width: 30px;
     height: 41px;
   }
-
-  /* title 안에서 커서 깜빡임 */
   .title-cursor {
     display: inline-block;
     width: 8px;
@@ -101,7 +91,6 @@
     margin-left: 2px;
     animation: blink 0.8s infinite;
   }
-
   @keyframes quake {
     0%   { transform: translate(0, 0); }
     10%  { transform: translate(-2px, 2px); }
@@ -121,49 +110,38 @@
 </style>
 </head>
 <body>
-
 <div id="title">": "</div>
 <div id="description">
 This project is inspired by the film 'Inception' and Newton's apple. Press Esc to reset.
 </div>
-
 <div id="typing-area" tabindex="0">
   <canvas id="matter-canvas"></canvas>
   <div id="typing-preview"></div>
 </div>
 <div id="cursor"></div>
 <div class="hint" id="hint">Type anywhere + press Enter ⏎</div>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
-
 <script>
 // ------------------------------
 // 🍏 Title Typing Animation
 // ------------------------------
 const titleEl = document.getElementById('title');
 let step = 0;
-
 async function typeTitleLoop() {
   while (true) {
     titleEl.textContent = ':';
     await blinkCursor(2);
-
-    // apple 글자 타이핑
     const text = ' apple';
     for (let i = 0; i < text.length; i++) {
       titleEl.textContent = ':' + text.slice(0, i + 1);
       await wait(150);
     }
-
-    // 깜빡 2번 후 다시 반복
     await blinkCursor(2, ' apple');
   }
 }
-
 function wait(ms) {
   return new Promise(res => setTimeout(res, ms));
 }
-
 async function blinkCursor(times = 2, after = '') {
   for (let i = 0; i < times; i++) {
     titleEl.innerHTML = `:${after}<span class="title-cursor"></span>`;
@@ -172,26 +150,21 @@ async function blinkCursor(times = 2, after = '') {
     await wait(300);
   }
 }
-
 typeTitleLoop();
 
 // ------------------------------
-// 🍎 기존 Matter.js 로직 (요약: typing area + gravity + apple.png)
+// 🍎 Matter.js 등 타이핑 커서/미리보기 구현
 // ------------------------------
 (() => {
   const { Engine, Render, Runner, World, Bodies, Composite, Events } = Matter;
-
   const typingArea = document.getElementById('typing-area');
   const cursorEl = document.getElementById('cursor');
   const hintEl = document.getElementById('hint');
   const previewLayer = document.getElementById('typing-preview');
-
   const engine = Engine.create();
   const world = engine.world;
-
   const W = typingArea.clientWidth;
   const H = typingArea.clientHeight;
-
   const render = Render.create({
     element: typingArea,
     engine,
@@ -207,7 +180,6 @@ typeTitleLoop();
   const runner = Runner.create();
   Runner.run(runner, engine);
 
-  // 벽을 투명하게
   const walls = [
     Bodies.rectangle(W/2, H+10, W, 20, { isStatic: true, render: { visible: false } }),
     Bodies.rectangle(W/2, -10, W, 20, { isStatic: true, render: { visible: false } }),
@@ -234,59 +206,23 @@ typeTitleLoop();
   let previewChars = [];
   const charAdvance = 10;
 
-  typingArea.addEventListener('click', (e) => {
+  // 커서 위치 보이게 하는 함수
+  function showBlinkingCursor() {
     const rect = typingArea.getBoundingClientRect();
-    cursorX = e.clientX - rect.left;
-    cursorY = e.clientY - rect.top;
-    cursorEl.style.left = (rect.left + cursorX - 2) + 'px';
-    cursorEl.style.top = (rect.top + cursorY - 9) + 'px';
+    // 커서 위치: 마지막 글자 뒤, buffer가 비었으면 입력 시작 위치
+    let x = cursorX + previewChars.length * charAdvance;
+    let y = cursorY;
+    cursorEl.style.left = (rect.left + x - 2) + 'px';
+    cursorEl.style.top = (rect.top + y - 9) + 'px';
     cursorEl.style.display = 'block';
-    clearPreview();
-    buffer = "";
-    active = true;
-    typingArea.focus();
-  });
-
-  typingArea.addEventListener('dblclick', (e) => {
-    hintEl.style.left = (e.pageX + 10) + 'px';
-    hintEl.style.top  = (e.pageY - 20) + 'px';
-    hintEl.style.opacity = 1;
-    setTimeout(() => hintEl.style.opacity = 0, 1200);
-  });
-
-  document.addEventListener('keydown', (e) => {
-    if (!active) return;
-    if (e.key === 'Escape') { location.reload(); return; }
-
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      if (!buffer.trim()) return;
-      if (buffer.toLowerCase() === 'apple') {
-        createAppleSprite(cursorX, cursorY);
-        quake();
-        cycleGravity();
-      } else {
-        commitBufferAsBodies(buffer, cursorX, cursorY);
-      }
-      buffer = "";
-      clearPreview();
-      return;
-    }
-
-    if (e.key.length === 1) {
-      buffer += e.key;
-      addPreviewChar(e.key);
-    }
-  });
-
-  function quake() {
-  typingArea.classList.remove('shake'); // 연속 트리거 대비 초기화
-  // reflow로 애니메이션 재시작 보장
-  void typingArea.offsetWidth;
-  typingArea.classList.add('shake');
-  setTimeout(() => typingArea.classList.remove('shake'), 500);
   }
-  
+  // preview 글자 하나 삭제 함수
+  function removePreviewChar() {
+    if (previewChars.length > 0) {
+      let last = previewChars.pop();
+      last.remove();
+    }
+  }
   function addPreviewChar(ch) {
     const idx = previewChars.length;
     const span = document.createElement('span');
@@ -296,13 +232,13 @@ typeTitleLoop();
     span.style.top  = (cursorY - 10) + 'px';
     previewLayer.appendChild(span);
     previewChars.push(span);
+    showBlinkingCursor();
   }
-
   function clearPreview() {
     previewChars.forEach(n => n.remove());
     previewChars = [];
+    showBlinkingCursor(); // 신규 커서 표시
   }
-
   function commitBufferAsBodies(text, x, y) {
     const letters = text.split('');
     letters.forEach((char, i) => {
@@ -316,7 +252,6 @@ typeTitleLoop();
       World.add(world, body);
     });
   }
-
   function createAppleSprite(x, y) {
     const body = Bodies.rectangle(x, y, 30, 41, {
       restitution: 0.2,
@@ -333,12 +268,79 @@ typeTitleLoop();
     });
     World.add(world, body);
   }
-
   function cycleGravity() {
     gIndex = (gIndex + 1) % gravities.length;
     engine.gravity.x = gravities[gIndex].x;
     engine.gravity.y = gravities[gIndex].y;
   }
+  function quake() {
+    typingArea.classList.remove('shake');
+    void typingArea.offsetWidth;
+    typingArea.classList.add('shake');
+    setTimeout(() => typingArea.classList.remove('shake'), 500);
+  }
+  
+  typingArea.addEventListener('click', (e) => {
+    const rect = typingArea.getBoundingClientRect();
+    cursorX = e.clientX - rect.left;
+    cursorY = e.clientY - rect.top;
+    cursorEl.style.left = (rect.left + cursorX - 2) + 'px';
+    cursorEl.style.top = (rect.top + cursorY - 9) + 'px';
+    cursorEl.style.display = 'block';
+    clearPreview();
+    buffer = "";
+    active = true;
+    typingArea.focus();
+    showBlinkingCursor();
+  });
+
+  typingArea.addEventListener('dblclick', (e) => {
+    hintEl.style.left = (e.pageX + 10) + 'px';
+    hintEl.style.top  = (e.pageY - 20) + 'px';
+    hintEl.style.opacity = 1;
+    setTimeout(() => hintEl.style.opacity = 0, 1200);
+  });
+
+  // BACKSPACE 핸들 추가 및 커서 깜빡임 유지
+  document.addEventListener('keydown', (e) => {
+    if (!active) return;
+    if (e.key === 'Escape') { location.reload(); return; }
+
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (!buffer.trim()) return;
+      if (buffer.toLowerCase() === 'apple') {
+        createAppleSprite(cursorX, cursorY);
+        quake();
+        cycleGravity();
+      } else {
+        commitBufferAsBodies(buffer, cursorX, cursorY);
+      }
+      buffer = "";
+      clearPreview();
+      showBlinkingCursor();
+      return;
+    }
+
+    // 여기부터 Backspace 커스텀
+    if (e.key === 'Backspace') {
+      e.preventDefault();
+      if (buffer.length > 0) {
+        buffer = buffer.slice(0, -1);
+        removePreviewChar();
+        showBlinkingCursor();
+      } else {
+        // buffer가 이미 비어 있는 경우
+        showBlinkingCursor();
+      }
+      return;
+    }
+
+    if (e.key.length === 1) {
+      buffer += e.key;
+      addPreviewChar(e.key);
+    }
+  });
 
   Events.on(render, 'afterRender', () => {
     const ctx = render.context;
@@ -356,6 +358,16 @@ typeTitleLoop();
     }
     ctx.restore();
   });
+
+  // 커서 깜빡임 항상 유지 (active일 때만)
+  setInterval(() => {
+    if (active && cursorEl.style.display !== 'none') {
+      cursorEl.style.visibility = cursorEl.style.visibility === 'hidden' ? 'visible' : 'hidden';
+    } else {
+      cursorEl.style.visibility = 'visible'; // 비활성화시 항상 보이도록
+    }
+  }, 400);
+
 })();
 </script>
 </body>
