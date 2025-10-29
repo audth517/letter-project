@@ -28,14 +28,13 @@
     line-height: 1.5em;
   }
 
-  /* (1) 반드시 유지해야 하는 typing area 스타일 */
   #typing-area {
     position: absolute;
     top: 230px;
     left: 60px;
     right: 60px;
     bottom: 100px;
-    border: 0.6pt solid #dbd7d4;
+    border: 1.2pt solid #bebebe;
     border-radius: 9px;
     box-shadow: 6px 6px 17px rgba(188, 185, 183, 0.6);
     background-color: #e6e4e3;
@@ -44,7 +43,6 @@
     outline: none;
   }
 
-  /* 깜빡이는 커서 */
   #cursor {
     position: absolute;
     width: 6px;
@@ -54,12 +52,12 @@
     animation: blink 0.8s infinite;
     pointer-events: none;
   }
+
   @keyframes blink {
     0%, 50% { opacity: 1; }
     50.1%, 100% { opacity: 0; }
   }
 
-  /* 더블클릭 힌트 (옵션) */
   .hint {
     position: absolute;
     padding: 6px 10px;
@@ -75,7 +73,6 @@
     transition: opacity 0.15s ease;
   }
 
-  /* 타이핑 미리보기(DOM 글자) */
   #typing-preview {
     position: absolute;
     left: 0;
@@ -89,10 +86,9 @@
     user-select: none;
   }
 
-  /* apple 이미지 크기 가이드 (스프라이트에는 직접 적용되지만 참고용) */
   .apple {
-    width: 8px;
-    height: 13px;
+    width: 23px;
+    height: 30px;
   }
 </style>
 </head>
@@ -100,7 +96,8 @@
 
 <div id="title">"Apple"</div>
 <div id="description">
-This project is inspired by the film 'Inception' and Newton's apple. Press Esc to reset.
+This project is inspired by the film 'Inception' and Newton's apple. 
+Click anywhere to place the cursor. Type and press Enter. Press Esc to reset.
 </div>
 
 <div id="typing-area" tabindex="0">
@@ -120,11 +117,9 @@ This project is inspired by the film 'Inception' and Newton's apple. Press Esc t
   const hintEl = document.getElementById('hint');
   const previewLayer = document.getElementById('typing-preview');
 
-  // Matter.js 셋업
   const engine = Engine.create();
   const world = engine.world;
 
-  // 캔버스 크기 = typing-area 내부 크기
   const W = typingArea.clientWidth;
   const H = typingArea.clientHeight;
 
@@ -137,7 +132,6 @@ This project is inspired by the film 'Inception' and Newton's apple. Press Esc t
       height: H,
       wireframes: false,
       background: 'transparent',
-      // 픽셀 라운딩 방지로 텍스트가 더 부드럽게 보임
       pixelRatio: window.devicePixelRatio || 1
     }
   });
@@ -145,16 +139,16 @@ This project is inspired by the film 'Inception' and Newton's apple. Press Esc t
   const runner = Runner.create();
   Runner.run(runner, engine);
 
-  // 경계 벽(바깥으로 못 나가게)
+  // 벽 설정
   const walls = [
-    Bodies.rectangle(W/2, H+10, W, 20, { isStatic: true }),       // bottom
-    Bodies.rectangle(W/2, -10, W, 20, { isStatic: true }),        // top
-    Bodies.rectangle(-10, H/2, 20, H, { isStatic: true }),        // left
-    Bodies.rectangle(W+10, H/2, 20, H, { isStatic: true })        // right
+    Bodies.rectangle(W/2, H+10, W, 20, { isStatic: true }),
+    Bodies.rectangle(W/2, -10, W, 20, { isStatic: true }),
+    Bodies.rectangle(-10, H/2, 20, H, { isStatic: true }),
+    Bodies.rectangle(W+10, H/2, 20, H, { isStatic: true })
   ];
   World.add(world, walls);
 
-  // 중력 사이클: 아래 → 왼쪽 → 위 → 오른쪽
+  // 중력 방향 순환
   const gravities = [
     {x: 0,  y: 1},
     {x: -1, y: 0},
@@ -164,35 +158,29 @@ This project is inspired by the film 'Inception' and Newton's apple. Press Esc t
   let gIndex = 0;
   engine.gravity.x = gravities[gIndex].x;
   engine.gravity.y = gravities[gIndex].y;
-  engine.gravity.scale = 0.001; // 부드럽게(필요시 조정)
+  engine.gravity.scale = 0.001;
 
-  // 상태
-  let active = false;           // 커서 활성화 여부
+  let active = false;
   let cursorX = W / 2;
   let cursorY = H / 2;
-  let buffer = "";              // 현재 타이핑 버퍼
-  let previewChars = [];        // DOM 미리보기 글자 목록
-  const letterBodies = [];      // 생성된 문자 바디 추적
+  let buffer = "";
+  let previewChars = [];
+  const letterBodies = [];
+  const charAdvance = 10;
 
-  // 클릭: 커서 위치 설정 + 활성화
   typingArea.addEventListener('click', (e) => {
     const rect = typingArea.getBoundingClientRect();
     cursorX = e.clientX - rect.left;
     cursorY = e.clientY - rect.top;
-
-    // 커서 표시
     cursorEl.style.left = (rect.left + cursorX - 2) + 'px';
-    cursorEl.style.top  = (rect.top + cursorY - 9) + 'px';
+    cursorEl.style.top = (rect.top + cursorY - 9) + 'px';
     cursorEl.style.display = 'block';
-
-    // 미리보기 시작점도 초기화
     clearPreview();
     buffer = "";
     active = true;
     typingArea.focus();
   });
 
-  // 더블클릭: 힌트 표시 (옵션)
   typingArea.addEventListener('dblclick', (e) => {
     hintEl.style.left = (e.pageX + 10) + 'px';
     hintEl.style.top  = (e.pageY - 20) + 'px';
@@ -200,15 +188,9 @@ This project is inspired by the film 'Inception' and Newton's apple. Press Esc t
     setTimeout(() => hintEl.style.opacity = 0, 1200);
   });
 
-  // 키 입력 처리
   document.addEventListener('keydown', (e) => {
     if (!active) return;
-
-    if (e.key === 'Escape') {
-      // 전체 리셋
-      location.reload();
-      return;
-    }
+    if (e.key === 'Escape') { location.reload(); return; }
 
     if (e.key === 'Backspace') {
       e.preventDefault();
@@ -223,42 +205,33 @@ This project is inspired by the film 'Inception' and Newton's apple. Press Esc t
       e.preventDefault();
       if (!buffer.trim()) return;
 
-      // apple이면: 사과 이미지 + 중력 회전 (폭발/임의힘 X)
       if (buffer.toLowerCase() === 'apple') {
         createAppleSprite(cursorX, cursorY);
-        cycleGravity(); // 기존 문자들은 자연스럽게 새 중력으로 이동
+        cycleGravity();
       } else {
-        // 버퍼의 글자들을 Matter 바디(텍스트 전용)로 전환
         commitBufferAsBodies(buffer, cursorX, cursorY);
       }
-
-      // 미리보기/버퍼 초기화
       buffer = "";
       clearPreview();
       return;
     }
 
-    // 일반 입력(한 글자)
     if (e.key.length === 1) {
       buffer += e.key;
       addPreviewChar(e.key);
     }
   });
 
-  // ====== 미리보기(타이핑 중 DOM 텍스트) ======
-  const charAdvance = 10; // 글자 간격(미리보기 & 바디 위치 동일한 폭으로)
   function addPreviewChar(ch) {
     const idx = previewChars.length;
     const span = document.createElement('span');
     span.className = 'preview-char';
     span.textContent = ch;
-    // 현재 중력 방향과 상관없이 "입력 시작 지점" 기준으로 가로로 나열
     span.style.left = (cursorX + idx * charAdvance) + 'px';
     span.style.top  = (cursorY - 10) + 'px';
     previewLayer.appendChild(span);
     previewChars.push(span);
 
-    // 커서 위치를 글자 끝으로 옮겨서 타이핑 느낌 강화
     const rect = typingArea.getBoundingClientRect();
     cursorEl.style.left = (rect.left + cursorX + (idx + 0.8) * charAdvance) + 'px';
     cursorEl.style.top  = (rect.top + cursorY - 9) + 'px';
@@ -267,11 +240,6 @@ This project is inspired by the film 'Inception' and Newton's apple. Press Esc t
   function removeLastPreviewChar() {
     const last = previewChars.pop();
     if (last) last.remove();
-
-    const rect = typingArea.getBoundingClientRect();
-    const idx = previewChars.length;
-    cursorEl.style.left = (rect.left + cursorX + (idx + 0.8) * charAdvance) + 'px';
-    cursorEl.style.top  = (rect.top + cursorY - 9) + 'px';
   }
 
   function clearPreview() {
@@ -279,18 +247,14 @@ This project is inspired by the film 'Inception' and Newton's apple. Press Esc t
     previewChars = [];
   }
 
-  // ====== 버퍼를 Matter 바디(문자)로 확정 ======
   function commitBufferAsBodies(text, x, y) {
     const letters = text.split('');
     letters.forEach((char, i) => {
-      // 원(작은 반지름) 바디를 만들고, 실제 렌더는 afterRender에서 글자로 덮어씀
       const body = Bodies.circle(x + i * charAdvance, y, 8, {
         restitution: 0.2,
         friction: 0.2,
         frictionAir: 0.01,
-        render: {
-          opacity: 0 // 바디 자체는 보이지 않게(네모/원 안 보이게)
-        },
+        render: { opacity: 0 },
         label: `char:${char}`
       });
       letterBodies.push(body);
@@ -298,7 +262,7 @@ This project is inspired by the film 'Inception' and Newton's apple. Press Esc t
     });
   }
 
-  // ====== apple 이미지 스프라이트 ======
+  // ✅ apple.png 1020×1384 → 23×30로 축소
   function createAppleSprite(x, y) {
     const body = Bodies.rectangle(x, y, 23, 30, {
       restitution: 0.2,
@@ -306,9 +270,9 @@ This project is inspired by the film 'Inception' and Newton's apple. Press Esc t
       frictionAir: 0.01,
       render: {
         sprite: {
-          texture: 'apple.png', // 같은 저장소(폴더)에 apple.png 필요
-          xScale: 1,
-          yScale: 1
+          texture: "apple.png",
+          xScale: 23 / 1020,  // ≈ 0.02255
+          yScale: 30 / 1384   // ≈ 0.02167
         }
       },
       label: 'apple'
@@ -316,15 +280,12 @@ This project is inspired by the film 'Inception' and Newton's apple. Press Esc t
     World.add(world, body);
   }
 
-  // ====== 중력 전환 (폭발 없음) ======
   function cycleGravity() {
     gIndex = (gIndex + 1) % gravities.length;
     engine.gravity.x = gravities[gIndex].x;
     engine.gravity.y = gravities[gIndex].y;
-    // 임의 힘(applyForce) 미적용 → 터지지 않고 자연스럽게 쏠림
   }
 
-  // ====== 문자 렌더링: 엔진 렌더 이후에 글자를 그려서 스프라이트/배경을 가리지 않음 ======
   Events.on(render, 'afterRender', () => {
     const ctx = render.context;
     ctx.save();
@@ -332,8 +293,6 @@ This project is inspired by the film 'Inception' and Newton's apple. Press Esc t
     ctx.fillStyle = '#413e3e';
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'center';
-
-    // 월드 내 모든 바디 중 label이 char:* 인 것만 문자로 그림
     const bodies = Composite.allBodies(world);
     for (const b of bodies) {
       if (!b.label || !b.label.startsWith('char:')) continue;
@@ -343,10 +302,6 @@ This project is inspired by the film 'Inception' and Newton's apple. Press Esc t
     }
     ctx.restore();
   });
-
-  // 리사이즈 대응(선택): 필요 시 구현
-  // window.addEventListener('resize', ...);
-
 })();
 </script>
 </body>
