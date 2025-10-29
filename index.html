@@ -272,20 +272,6 @@ typeTitleLoop();
       clearPreview();
       return;
     }
-    // backspace
-    if (e.key === 'Backspace') {
-        e.preventDefault();
-        if (buffer.length > 0) {
-            buffer = buffer.slice(0, -1);
-            removePreviewChar(); // 미리보기에서 한 글자 제거하는 함수 필요
-            if (buffer.length === 0) {
-                showBlinkingCursor(cursorX, cursorY); // 깜빡이는 커서 표시 함수 필요
-            }
-        } else {
-            showBlinkingCursor(cursorX, cursorY); // buffer가 이미 비어있을 때
-        }
-        return;
-    }
 
     if (e.key.length === 1) {
       buffer += e.key;
