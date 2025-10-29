@@ -28,7 +28,7 @@
     line-height: 1.5em;
   }
 
-  /* 반드시 유지해야 하는 typing area 디자인 */
+  /* (1) 반드시 유지해야 하는 typing area 스타일 */
   #typing-area {
     position: absolute;
     top: 230px;
@@ -44,38 +44,22 @@
     outline: none;
   }
 
+  /* 깜빡이는 커서 */
   #cursor {
     position: absolute;
     width: 6px;
-    height: 16px;
+    height: 18px;
     background-color: #404e3e;
     display: none;
     animation: blink 0.8s infinite;
+    pointer-events: none;
   }
-
   @keyframes blink {
     0%, 50% { opacity: 1; }
     50.1%, 100% { opacity: 0; }
   }
 
-  @keyframes quake {
-    0%   { transform: translate(0, 0); }
-    10%  { transform: translate(-2px, 2px); }
-    20%  { transform: translate(2px, -2px); }
-    30%  { transform: translate(-3px, 1px); }
-    40%  { transform: translate(3px, -1px); }
-    50%  { transform: translate(-2px, 2px); }
-    60%  { transform: translate(2px, -2px); }
-    70%  { transform: translate(-1px, 1px); }
-    80%  { transform: translate(1px, -1px); }
-    90%  { transform: translate(-2px, 0); }
-    100% { transform: translate(0, 0); }
-  }
-
-  #typing-area.shake {
-    animation: quake 0.45s linear 1;
-  }
-
+  /* 더블클릭 힌트 (옵션) */
   .hint {
     position: absolute;
     padding: 6px 10px;
@@ -91,6 +75,21 @@
     transition: opacity 0.15s ease;
   }
 
+  /* 타이핑 미리보기(DOM 글자) */
+  #typing-preview {
+    position: absolute;
+    left: 0;
+    top: 0;
+    pointer-events: none;
+  }
+  .preview-char {
+    position: absolute;
+    font: 16px 'Courier New', monospace;
+    color: #413e3e;
+    user-select: none;
+  }
+
+  /* apple 이미지 크기 가이드 (스프라이트에는 직접 적용되지만 참고용) */
   .apple {
     width: 23px;
     height: 30px;
@@ -101,160 +100,253 @@
 
 <div id="title">"Apple"</div>
 <div id="description">
-This project is inspired by the film 'Inception' and Newton's apple. 
-Press Esc to reset.
+This project is inspired by the film 'Inception' and Newton's apple. Press Esc to reset.
 </div>
 
-<div id="typing-area" tabindex="0"></div>
+<div id="typing-area" tabindex="0">
+  <canvas id="matter-canvas"></canvas>
+  <div id="typing-preview"></div>
+</div>
 <div id="cursor"></div>
 <div class="hint" id="hint">Type anywhere + press Enter ⏎</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
 <script>
-const { Engine, Render, Runner, World, Bodies, Body, Composite } = Matter;
+(() => {
+  const { Engine, Render, Runner, World, Bodies, Body, Composite, Events } = Matter;
 
-const typingArea = document.getElementById('typing-area');
-const cursor = document.getElementById('cursor');
-const hint = document.getElementById('hint');
+  const typingArea = document.getElementById('typing-area');
+  const cursorEl = document.getElementById('cursor');
+  const hintEl = document.getElementById('hint');
+  const previewLayer = document.getElementById('typing-preview');
 
-// Matter.js 기본 설정
-const engine = Engine.create();
-const world = engine.world;
+  // Matter.js 셋업
+  const engine = Engine.create();
+  const world = engine.world;
 
-const render = Render.create({
-  element: typingArea,
-  engine: engine,
-  options: {
-    width: typingArea.clientWidth,
-    height: typingArea.clientHeight,
-    wireframes: false,
-    background: 'transparent'
-  }
-});
-Render.run(render);
-Runner.run(Runner.create(), engine);
+  // 캔버스 크기 = typing-area 내부 크기
+  const W = typingArea.clientWidth;
+  const H = typingArea.clientHeight;
 
-// 벽 생성
-const walls = [
-  Bodies.rectangle(typingArea.clientWidth/2, typingArea.clientHeight, typingArea.clientWidth, 20, { isStatic: true }),
-  Bodies.rectangle(typingArea.clientWidth/2, 0, typingArea.clientWidth, 20, { isStatic: true }),
-  Bodies.rectangle(typingArea.clientWidth, typingArea.clientHeight/2, 20, typingArea.clientHeight, { isStatic: true }),
-  Bodies.rectangle(0, typingArea.clientHeight/2, 20, typingArea.clientHeight, { isStatic: true })
-];
-World.add(world, walls);
-
-// 초기 중력 아래
-const gravities = [
-  {x:0, y:1}, {x:-1, y:0}, {x:0, y:-1}, {x:1, y:0}
-];
-let gravityIndex = 0;
-engine.gravity.x = gravities[gravityIndex].x;
-engine.gravity.y = gravities[gravityIndex].y;
-
-// 상태 변수
-let isActive = false;
-let inputBuffer = "";
-let cursorPos = { x: typingArea.clientWidth/2, y: typingArea.clientHeight/2 };
-
-// 지진 효과
-function earthquake() {
-  typingArea.classList.add('shake');
-  setTimeout(()=> typingArea.classList.remove('shake'), 500);
-  const bodies = Composite.allBodies(world);
-  bodies.forEach(b => {
-    Body.applyForce(b, b.position, {
-      x: (Math.random() - 0.5) * 0.2,
-      y: (Math.random() - 0.5) * 0.2
-    });
-  });
-}
-
-// 클릭 시 커서 이동
-typingArea.addEventListener('click', (e) => {
-  const rect = typingArea.getBoundingClientRect();
-  cursorPos.x = e.clientX - rect.left;
-  cursorPos.y = e.clientY - rect.top;
-  cursor.style.left = cursorPos.x + 'px';
-  cursor.style.top = cursorPos.y + 'px';
-  cursor.style.display = 'block';
-  isActive = true;
-});
-
-// 더블 클릭 시 힌트 표시
-typingArea.addEventListener('dblclick', (e) => {
-  hint.style.left = (e.pageX + 10) + 'px';
-  hint.style.top = (e.pageY - 20) + 'px';
-  hint.style.opacity = 1;
-  setTimeout(()=> hint.style.opacity = 0, 1200);
-});
-
-// 키 입력
-document.addEventListener('keydown', (e) => {
-  if (!isActive) return;
-  if (e.key === 'Escape') location.reload();
-  else if (e.key === 'Enter') {
-    if (inputBuffer.trim() !== "") {
-      if (inputBuffer.toLowerCase() === "apple") {
-        createAppleImage(cursorPos.x, cursorPos.y);
-        earthquake();
-        gravityIndex = (gravityIndex + 1) % gravities.length;
-        engine.gravity.x = gravities[gravityIndex].x;
-        engine.gravity.y = gravities[gravityIndex].y;
-      } else {
-        addTextToWorld(inputBuffer, cursorPos.x, cursorPos.y);
-      }
-      inputBuffer = "";
+  const render = Render.create({
+    element: typingArea,
+    engine,
+    canvas: document.getElementById('matter-canvas'),
+    options: {
+      width: W,
+      height: H,
+      wireframes: false,
+      background: 'transparent',
+      // 픽셀 라운딩 방지로 텍스트가 더 부드럽게 보임
+      pixelRatio: window.devicePixelRatio || 1
     }
-  } else if (e.key.length === 1) {
-    inputBuffer += e.key;
-  }
-});
+  });
+  Render.run(render);
+  const runner = Runner.create();
+  Runner.run(runner, engine);
 
-// 텍스트 추가
-function addTextToWorld(text, x, y) {
-  const letters = text.split('');
-  letters.forEach((char, i) => {
-    const body = Bodies.circle(x + i * 16, y, 10, {
-      restitution: 0.4,
-      render: { fillStyle: '#413e3e' },
-      label: char
+  // 경계 벽(바깥으로 못 나가게)
+  const walls = [
+    Bodies.rectangle(W/2, H+10, W, 20, { isStatic: true }),       // bottom
+    Bodies.rectangle(W/2, -10, W, 20, { isStatic: true }),        // top
+    Bodies.rectangle(-10, H/2, 20, H, { isStatic: true }),        // left
+    Bodies.rectangle(W+10, H/2, 20, H, { isStatic: true })        // right
+  ];
+  World.add(world, walls);
+
+  // 중력 사이클: 아래 → 왼쪽 → 위 → 오른쪽
+  const gravities = [
+    {x: 0,  y: 1},
+    {x: -1, y: 0},
+    {x: 0,  y: -1},
+    {x: 1,  y: 0},
+  ];
+  let gIndex = 0;
+  engine.gravity.x = gravities[gIndex].x;
+  engine.gravity.y = gravities[gIndex].y;
+  engine.gravity.scale = 0.001; // 부드럽게(필요시 조정)
+
+  // 상태
+  let active = false;           // 커서 활성화 여부
+  let cursorX = W / 2;
+  let cursorY = H / 2;
+  let buffer = "";              // 현재 타이핑 버퍼
+  let previewChars = [];        // DOM 미리보기 글자 목록
+  const letterBodies = [];      // 생성된 문자 바디 추적
+
+  // 클릭: 커서 위치 설정 + 활성화
+  typingArea.addEventListener('click', (e) => {
+    const rect = typingArea.getBoundingClientRect();
+    cursorX = e.clientX - rect.left;
+    cursorY = e.clientY - rect.top;
+
+    // 커서 표시
+    cursorEl.style.left = (rect.left + cursorX - 2) + 'px';
+    cursorEl.style.top  = (rect.top + cursorY - 9) + 'px';
+    cursorEl.style.display = 'block';
+
+    // 미리보기 시작점도 초기화
+    clearPreview();
+    buffer = "";
+    active = true;
+    typingArea.focus();
+  });
+
+  // 더블클릭: 힌트 표시 (옵션)
+  typingArea.addEventListener('dblclick', (e) => {
+    hintEl.style.left = (e.pageX + 10) + 'px';
+    hintEl.style.top  = (e.pageY - 20) + 'px';
+    hintEl.style.opacity = 1;
+    setTimeout(() => hintEl.style.opacity = 0, 1200);
+  });
+
+  // 키 입력 처리
+  document.addEventListener('keydown', (e) => {
+    if (!active) return;
+
+    if (e.key === 'Escape') {
+      // 전체 리셋
+      location.reload();
+      return;
+    }
+
+    if (e.key === 'Backspace') {
+      e.preventDefault();
+      if (buffer.length > 0) {
+        buffer = buffer.slice(0, -1);
+        removeLastPreviewChar();
+      }
+      return;
+    }
+
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (!buffer.trim()) return;
+
+      // apple이면: 사과 이미지 + 중력 회전 (폭발/임의힘 X)
+      if (buffer.toLowerCase() === 'apple') {
+        createAppleSprite(cursorX, cursorY);
+        cycleGravity(); // 기존 문자들은 자연스럽게 새 중력으로 이동
+      } else {
+        // 버퍼의 글자들을 Matter 바디(텍스트 전용)로 전환
+        commitBufferAsBodies(buffer, cursorX, cursorY);
+      }
+
+      // 미리보기/버퍼 초기화
+      buffer = "";
+      clearPreview();
+      return;
+    }
+
+    // 일반 입력(한 글자)
+    if (e.key.length === 1) {
+      buffer += e.key;
+      addPreviewChar(e.key);
+    }
+  });
+
+  // ====== 미리보기(타이핑 중 DOM 텍스트) ======
+  const charAdvance = 10; // 글자 간격(미리보기 & 바디 위치 동일한 폭으로)
+  function addPreviewChar(ch) {
+    const idx = previewChars.length;
+    const span = document.createElement('span');
+    span.className = 'preview-char';
+    span.textContent = ch;
+    // 현재 중력 방향과 상관없이 "입력 시작 지점" 기준으로 가로로 나열
+    span.style.left = (cursorX + idx * charAdvance) + 'px';
+    span.style.top  = (cursorY - 10) + 'px';
+    previewLayer.appendChild(span);
+    previewChars.push(span);
+
+    // 커서 위치를 글자 끝으로 옮겨서 타이핑 느낌 강화
+    const rect = typingArea.getBoundingClientRect();
+    cursorEl.style.left = (rect.left + cursorX + (idx + 0.8) * charAdvance) + 'px';
+    cursorEl.style.top  = (rect.top + cursorY - 9) + 'px';
+  }
+
+  function removeLastPreviewChar() {
+    const last = previewChars.pop();
+    if (last) last.remove();
+
+    const rect = typingArea.getBoundingClientRect();
+    const idx = previewChars.length;
+    cursorEl.style.left = (rect.left + cursorX + (idx + 0.8) * charAdvance) + 'px';
+    cursorEl.style.top  = (rect.top + cursorY - 9) + 'px';
+  }
+
+  function clearPreview() {
+    previewChars.forEach(n => n.remove());
+    previewChars = [];
+  }
+
+  // ====== 버퍼를 Matter 바디(문자)로 확정 ======
+  function commitBufferAsBodies(text, x, y) {
+    const letters = text.split('');
+    letters.forEach((char, i) => {
+      // 원(작은 반지름) 바디를 만들고, 실제 렌더는 afterRender에서 글자로 덮어씀
+      const body = Bodies.circle(x + i * charAdvance, y, 8, {
+        restitution: 0.2,
+        friction: 0.2,
+        frictionAir: 0.01,
+        render: {
+          opacity: 0 // 바디 자체는 보이지 않게(네모/원 안 보이게)
+        },
+        label: `char:${char}`
+      });
+      letterBodies.push(body);
+      World.add(world, body);
+    });
+  }
+
+  // ====== apple 이미지 스프라이트 ======
+  function createAppleSprite(x, y) {
+    const body = Bodies.rectangle(x, y, 23, 30, {
+      restitution: 0.2,
+      friction: 0.2,
+      frictionAir: 0.01,
+      render: {
+        sprite: {
+          texture: 'apple.png', // 같은 저장소(폴더)에 apple.png 필요
+          xScale: 1,
+          yScale: 1
+        }
+      },
+      label: 'apple'
     });
     World.add(world, body);
-  });
-}
+  }
 
-// apple 이미지 추가
-function createAppleImage(x, y) {
-  const img = Bodies.rectangle(x, y, 23, 30, {
-    restitution: 0.5,
-    render: {
-      sprite: {
-        texture: "apple.png",
-        xScale: 1,
-        yScale: 1
-      }
-    },
-    label: 'apple'
-  });
-  World.add(world, img);
-}
+  // ====== 중력 전환 (폭발 없음) ======
+  function cycleGravity() {
+    gIndex = (gIndex + 1) % gravities.length;
+    engine.gravity.x = gravities[gIndex].x;
+    engine.gravity.y = gravities[gIndex].y;
+    // 임의 힘(applyForce) 미적용 → 터지지 않고 자연스럽게 쏠림
+  }
 
-// 텍스트 렌더링
-(function renderText() {
-  const ctx = render.context;
-  const bodies = Composite.allBodies(world);
-  ctx.clearRect(0, 0, render.canvas.width, render.canvas.height);
-  Matter.Render.startViewTransform(render);
-  ctx.font = '16px Courier New';
-  ctx.fillStyle = '#413e3e';
-  bodies.forEach(body => {
-    if (body.label.length === 1) {
-      const pos = body.position;
-      ctx.fillText(body.label, pos.x - 5, pos.y + 5);
+  // ====== 문자 렌더링: 엔진 렌더 이후에 글자를 그려서 스프라이트/배경을 가리지 않음 ======
+  Events.on(render, 'afterRender', () => {
+    const ctx = render.context;
+    ctx.save();
+    ctx.font = '16px Courier New';
+    ctx.fillStyle = '#413e3e';
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center';
+
+    // 월드 내 모든 바디 중 label이 char:* 인 것만 문자로 그림
+    const bodies = Composite.allBodies(world);
+    for (const b of bodies) {
+      if (!b.label || !b.label.startsWith('char:')) continue;
+      const char = b.label.slice(5);
+      const p = b.position;
+      ctx.fillText(char, p.x, p.y + 1);
     }
+    ctx.restore();
   });
-  Matter.Render.endViewTransform(render);
-  requestAnimationFrame(renderText);
+
+  // 리사이즈 대응(선택): 필요 시 구현
+  // window.addEventListener('resize', ...);
+
 })();
 </script>
 </body>
