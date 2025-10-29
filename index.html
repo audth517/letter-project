@@ -1,54 +1,117 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Gravity Typing</title>
+<meta charset="UTF-8" />
+<title>"Apple"</title>
 <style>
   body {
     margin: 0;
-    background: #e6e4e3;
+    padding: 0;
+    background-color: #e6e4e3;
     font-family: 'Courier New', monospace;
     color: #413e3e;
   }
+
+  #title {
+    position: absolute;
+    top: 140px;
+    left: 60px;
+    font-size: 24px;
+    font-weight: bold;
+  }
+
+  #description {
+    position: absolute;
+    top: 165px;
+    left: 60px;
+    white-space: pre-line;
+    line-height: 1.5em;
+  }
+
   #typing-area {
     position: absolute;
-    top: 50px;
-    left: 50px;
-    width: 700px;
-    height: 500px;
-    border: 1.2pt solid #aaa;
-    border-radius: 10px;
-    box-shadow: 4px 4px 14px rgba(0,0,0,0.1);
+    top: 230px;
+    left: 60px;
+    right: 60px;
+    bottom: 100px;
+    border: 1.2pt solid #dbd7d4;
+    border-radius: 9px;
+    box-shadow: 6px 6px 17px rgba(188, 185, 183, 0.6);
+    background-color: #e6e4e3;
     overflow: hidden;
+    cursor: text;
+    outline: none;
   }
-  input {
+
+  #cursor {
     position: absolute;
-    bottom: 10px;
-    left: 20px;
-    width: 660px;
-    padding: 8px;
-    font-size: 16px;
+    width: 6px;
+    background-color: #404e3e;
+    height: 16px;
+    display: none;
+    animation: blink 0.8s infinite;
   }
-  canvas {
+
+  @keyframes blink {
+    0%, 50% { opacity: 1; }
+    50.1%, 100% { opacity: 0; }
+  }
+
+  @keyframes quake {
+    0%   { transform: translate(0, 0); }
+    10%  { transform: translate(-2px, 2px); }
+    20%  { transform: translate(2px, -2px); }
+    30%  { transform: translate(-3px, 1px); }
+    40%  { transform: translate(3px, -1px); }
+    50%  { transform: translate(-2px, 2px); }
+    60%  { transform: translate(2px, -2px); }
+    70%  { transform: translate(-1px, 1px); }
+    80%  { transform: translate(1px, -1px); }
+    90%  { transform: translate(-2px, 0); }
+    100% { transform: translate(0, 0); }
+  }
+
+  #typing-area.shake {
+    animation: quake 0.45s linear 1;
+  }
+
+  .hint {
     position: absolute;
-    top: 0;
-    left: 0;
+    padding: 6px 10px;
+    border: 1px solid #dbd7d4;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.95);
+    font-size: 12px;
+    color: #413e3e;
+    pointer-events: none;
+    white-space: nowrap;
+    box-shadow: 2px 2px 8px rgba(188,185,183,0.5);
+    opacity: 0;
+    transition: opacity 0.15s ease;
   }
 </style>
 </head>
 <body>
 
-<div id="typing-area"></div>
-<input id="textInput" placeholder="Type something and press Enter...">
+<div id="title">"Apple"</div>
+<div id="description">
+This project is inspired by the film 'Inception' and Newton's apple. 
+Press Esc to reset.
+</div>
+
+<div id="typing-area" tabindex="0"></div>
+<div id="cursor"></div>
+<div class="hint" id="hint">Type anywhere + press Enter ⏎</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
 <script>
 const { Engine, Render, Runner, World, Bodies, Body, Composite } = Matter;
 
 const typingArea = document.getElementById('typing-area');
-const input = document.getElementById('textInput');
+const cursor = document.getElementById('cursor');
+const hint = document.getElementById('hint');
 
-// Matter.js 기본 세팅
+// Matter.js 엔진 생성
 const engine = Engine.create();
 const world = engine.world;
 
@@ -56,8 +119,8 @@ const render = Render.create({
   element: typingArea,
   engine: engine,
   options: {
-    width: 700,
-    height: 500,
+    width: typingArea.clientWidth,
+    height: typingArea.clientHeight,
     wireframes: false,
     background: 'transparent'
   }
@@ -66,16 +129,16 @@ const render = Render.create({
 Render.run(render);
 Runner.run(Runner.create(), engine);
 
-// 벽 추가
+// 벽 생성
 const walls = [
-  Bodies.rectangle(350, 500, 700, 20, { isStatic: true }),
-  Bodies.rectangle(350, 0, 700, 20, { isStatic: true }),
-  Bodies.rectangle(700, 250, 20, 500, { isStatic: true }),
-  Bodies.rectangle(0, 250, 20, 500, { isStatic: true })
+  Bodies.rectangle(typingArea.clientWidth/2, typingArea.clientHeight, typingArea.clientWidth, 20, { isStatic: true }),
+  Bodies.rectangle(typingArea.clientWidth/2, 0, typingArea.clientWidth, 20, { isStatic: true }),
+  Bodies.rectangle(typingArea.clientWidth, typingArea.clientHeight/2, 20, typingArea.clientHeight, { isStatic: true }),
+  Bodies.rectangle(0, typingArea.clientHeight/2, 20, typingArea.clientHeight, { isStatic: true })
 ];
 World.add(world, walls);
 
-// 중력 순서 (아래 → 왼쪽 → 위 → 오른쪽)
+// 초기 중력 아래로
 const gravities = [
   {x:0, y:1}, {x:-1, y:0}, {x:0, y:-1}, {x:1, y:0}
 ];
@@ -83,8 +146,9 @@ let gravityIndex = 0;
 engine.gravity.x = gravities[gravityIndex].x;
 engine.gravity.y = gravities[gravityIndex].y;
 
-// 지진 효과
 function earthquake() {
+  typingArea.classList.add('shake');
+  setTimeout(()=> typingArea.classList.remove('shake'), 500);
   const bodies = Composite.allBodies(world);
   bodies.forEach(b => {
     Body.applyForce(b, b.position, {
@@ -94,45 +158,66 @@ function earthquake() {
   });
 }
 
-// 텍스트 입력 후 엔터 시 생성
-input.addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    const text = input.value.trim();
-    if (!text) return;
-    input.value = '';
+// 상태
+let isActive = false;
+let inputBuffer = "";
 
-    // 텍스트 생성 (문자별 박스)
-    const letters = text.split('');
-    const startX = 350 - (letters.length * 10);
-    letters.forEach((char, i) => {
-      const body = Bodies.rectangle(startX + i * 20, 50, 20, 20, {
-        restitution: 0.4,
-        render: {
-          fillStyle: '#413e3e',
-          text: { content: char }
-        },
-        label: char
-      });
-      World.add(world, body);
-    });
+// 더블 클릭 시 커서 표시 + 힌트
+typingArea.addEventListener('dblclick', (e) => {
+  isActive = true;
+  cursor.style.left = e.offsetX + 'px';
+  cursor.style.top = e.offsetY + 'px';
+  cursor.style.display = 'block';
 
-    // "apple" 입력 시 중력 변경 + 지진
-    if (text.toLowerCase() === 'apple') {
-      earthquake();
-      gravityIndex = (gravityIndex + 1) % gravities.length;
-      engine.gravity.x = gravities[gravityIndex].x;
-      engine.gravity.y = gravities[gravityIndex].y;
+  hint.style.left = (e.pageX + 10) + 'px';
+  hint.style.top = (e.pageY - 20) + 'px';
+  hint.style.opacity = 1;
+
+  setTimeout(()=> hint.style.opacity = 0, 1200);
+});
+
+// 타이핑 입력
+document.addEventListener('keydown', (e) => {
+  if (!isActive) return;
+  if (e.key === 'Escape') {
+    location.reload();
+  }
+  else if (e.key === 'Enter') {
+    if (inputBuffer.trim() !== "") {
+      addTextToWorld(inputBuffer);
+      if (inputBuffer.toLowerCase() === "apple") {
+        earthquake();
+        gravityIndex = (gravityIndex + 1) % gravities.length;
+        engine.gravity.x = gravities[gravityIndex].x;
+        engine.gravity.y = gravities[gravityIndex].y;
+      }
+      inputBuffer = "";
     }
+  }
+  else if (e.key.length === 1) {
+    inputBuffer += e.key;
   }
 });
 
-// 글자 렌더링 (Matter.js의 텍스트 지원은 없으므로 수동 렌더링)
+function addTextToWorld(text) {
+  const letters = text.split('');
+  const startX = Math.random() * (typingArea.clientWidth - letters.length*20) + 40;
+  letters.forEach((char, i) => {
+    const body = Bodies.rectangle(startX + i * 20, 80, 20, 20, {
+      restitution: 0.4,
+      render: { fillStyle: '#413e3e' },
+      label: char
+    });
+    World.add(world, body);
+  });
+}
+
+// Matter.js 커스텀 렌더링 (문자 표시)
 (function renderText() {
   const ctx = render.context;
   const bodies = Composite.allBodies(world);
   ctx.font = '16px Courier New';
   ctx.fillStyle = '#413e3e';
-
   Matter.Render.startViewTransform(render);
   bodies.forEach(body => {
     if (body.label.length === 1) {
@@ -141,7 +226,6 @@ input.addEventListener('keydown', e => {
     }
   });
   Matter.Render.endViewTransform(render);
-
   requestAnimationFrame(renderText);
 })();
 </script>
