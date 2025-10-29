@@ -28,13 +28,14 @@
     line-height: 1.5em;
   }
 
+  /* typing-area 스타일 — 반드시 유지 */
   #typing-area {
     position: absolute;
     top: 230px;
     left: 60px;
     right: 60px;
     bottom: 100px;
-    border: 1.2pt solid #bebebe;
+    border: 0.6pt solid #d1d0cf;
     border-radius: 9px;
     box-shadow: 6px 6px 17px rgba(188, 185, 183, 0.6);
     background-color: #e6e4e3;
@@ -96,8 +97,7 @@
 
 <div id="title">"Apple"</div>
 <div id="description">
-This project is inspired by the film 'Inception' and Newton's apple. 
-Click anywhere to place the cursor. Type and press Enter. Press Esc to reset.
+This project is inspired by the film 'Inception' and Newton's apple. Press Esc to reset.
 </div>
 
 <div id="typing-area" tabindex="0">
@@ -139,12 +139,12 @@ Click anywhere to place the cursor. Type and press Enter. Press Esc to reset.
   const runner = Runner.create();
   Runner.run(runner, engine);
 
-  // 벽 설정
+  // ✅ 완전 투명한 벽 (검은 선 완전 제거)
   const walls = [
-    Bodies.rectangle(W/2, H+10, W, 20, { isStatic: true }),
-    Bodies.rectangle(W/2, -10, W, 20, { isStatic: true }),
-    Bodies.rectangle(-10, H/2, 20, H, { isStatic: true }),
-    Bodies.rectangle(W+10, H/2, 20, H, { isStatic: true })
+    Bodies.rectangle(W/2, H+10, W, 20, { isStatic: true, render: { visible: false } }),
+    Bodies.rectangle(W/2, -10, W, 20, { isStatic: true, render: { visible: false } }),
+    Bodies.rectangle(-10, H/2, 20, H, { isStatic: true, render: { visible: false } }),
+    Bodies.rectangle(W+10, H/2, 20, H, { isStatic: true, render: { visible: false } })
   ];
   World.add(world, walls);
 
