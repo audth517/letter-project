@@ -199,7 +199,6 @@ typeTitleLoop();
     options: {
       width: W,
       height: H,
-      pixelRatio: pixelRatio,
       wireframes: false,
       background: 'transparent'
     }
@@ -344,7 +343,6 @@ typeTitleLoop();
   Events.on(render, 'afterRender', () => {
     const ctx = render.context;
     ctx.save();
-    ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
     ctx.font = '16px Courier New';
     ctx.fillStyle = '#413e3e';
     ctx.textBaseline = 'middle';
