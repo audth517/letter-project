@@ -193,12 +193,6 @@ typeTitleLoop();
   const H = typingArea.clientHeight;
 
   const render = Render.create({
-    const scale = window.devicePixelRatio || 1;
-    render.canvas.width = W * scale;
-    render.canvas.height = H * scale;
-    render.canvas.style.width = W + "px";
-    render.canvas.style.height = H + "px";
-    render.context.scale(scale, scale);
     element: typingArea,
     engine,
     canvas: document.getElementById('matter-canvas'),
