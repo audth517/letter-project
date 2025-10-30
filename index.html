@@ -207,6 +207,21 @@ typeTitleLoop();
   const runner = Runner.create();
   Runner.run(runner, engine);
 
+  const pixelRatio = window.devicePixelRatio || 1;
+  const render = Render.create({
+    element: typingArea,
+    engine,
+    canvas: document.getElementById('matter-canvas'),
+    options: {
+      width: W * pixelRatio,
+      height: H * pixelRatio,
+      pixelRatio: pixelRatio,
+      wireframes: false,
+      background: 'transparent'
+    }
+  });
+render.canvas.style.width = W + 'px';
+render.canvas.style.height = H + 'px';
   // 벽을 투명하게
   const walls = [
     Bodies.rectangle(W/2, H+10, W, 20, { isStatic: true, render: { visible: false } }),
@@ -273,12 +288,32 @@ typeTitleLoop();
       return;
     }
 
+    if (e.key === 'Backspace') {
+      e.preventDefault();
+      if (buffer.length > 0) {
+        buffer = buffer.slice(0, -1);
+        const last = previewChars.pop();
+        if (last) last.remove();
+        cursorX -= charAdvance; // ← 한 글자만큼 왼쪽 이동
+        updateCursor();
+      }
+      return;
+    }
+    
     if (e.key.length === 1) {
       buffer += e.key;
       addPreviewChar(e.key);
+      cursorX += charAdvance; // ← 커서 이동
+      updateCursor();
     }
   });
 
+  function updateCursor() {
+    const rect = typingArea.getBoundingClientRect();
+    cursorEl.style.left = (rect.left + cursorX - 2) + 'px';
+    cursorEl.style.top = (rect.top + cursorY - 9) + 'px';
+  }
+  
   function quake() {
   typingArea.classList.remove('shake'); // 연속 트리거 대비 초기화
   // reflow로 애니메이션 재시작 보장
