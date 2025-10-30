@@ -220,8 +220,8 @@ typeTitleLoop();
       background: 'transparent'
     }
   });
-render.canvas.style.width = W + 'px';
-render.canvas.style.height = H + 'px';
+  render.canvas.style.width = W + 'px';
+  render.canvas.style.height = H + 'px';
   // 벽을 투명하게
   const walls = [
     Bodies.rectangle(W/2, H+10, W, 20, { isStatic: true, render: { visible: false } }),
