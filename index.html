@@ -207,21 +207,6 @@ typeTitleLoop();
   const runner = Runner.create();
   Runner.run(runner, engine);
 
-  const pixelRatio = window.devicePixelRatio || 1;
-  const render = Render.create({
-    element: typingArea,
-    engine,
-    canvas: document.getElementById('matter-canvas'),
-    options: {
-      width: W * pixelRatio,
-      height: H * pixelRatio,
-      pixelRatio: pixelRatio,
-      wireframes: false,
-      background: 'transparent'
-    }
-  });
-  render.canvas.style.width = W + 'px';
-  render.canvas.style.height = H + 'px';
   // 벽을 투명하게
   const walls = [
     Bodies.rectangle(W/2, H+10, W, 20, { isStatic: true, render: { visible: false } }),
