@@ -295,7 +295,7 @@ typeTitleLoop();
 
   function updateCursor() {
     const rect = typingArea.getBoundingClientRect();
-    cursorEl.style.left = (rect.left + cursorX + 5) + 'px';
+    cursorEl.style.left = (rect.left + cursorX - 2) + 'px';
     cursorEl.style.top = (rect.top + cursorY - 9) + 'px';
   }
   
