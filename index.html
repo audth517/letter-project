@@ -192,6 +192,24 @@ typeTitleLoop();
   const W = typingArea.clientWidth;
   const H = typingArea.clientHeight;
 
+  const pixelRatio = window.devicePixelRatio || 1;
+
+  const render = Render.create({
+    element: typingArea,
+    engine,
+    canvas: document.getElementById('matter-canvas'),
+    options: {
+      width: W * pixelRatio,
+      height: H * pixelRatio,
+      pixelRatio: pixelRatio,
+      wireframes: false,
+      background: 'transparent'
+    }
+  });
+  render.canvas.style.width = W + 'px';
+  render.canvas.style.height = H + 'px';
+  render.context.imageSmoothingEnabled = false;
+
   const render = Render.create({
     element: typingArea,
     engine,
