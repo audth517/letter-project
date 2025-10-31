@@ -357,22 +357,22 @@ typeTitleLoop();
     const h = 41;
     const bodyX = logicalToScreenX(0);
     const bodyY = caretBaseY;
-    const body = Bodies.rectangle(bodyX, bodyY, w, h, {
+  
+    const body = Matter.Bodies.rectangle(bodyX, bodyY, w, h, {
       restitution: 0.2,
       friction: 0.2,
       frictionAir: 0.01,
       render: {
         sprite: {
           texture: "apple.png",
-          // 여기서 스케일을 body 크기와 실제 이미지 해상도에 맞게 조절
-          // 지금은 가정: apple.png가 실제로 30x41 정도인 고해상도 버전이라고 가정하고 1로 둔다.
-          xScale: 1,
-          yScale: 1
+          xScale: w / 300,  // 원본이 300px일 때 → 0.1
+          yScale: h / 410   // 원본이 410px일 때 → 0.1
         }
       },
-      label: 'apple'
+      label: "apple"
     });
-    World.add(world, body);
+  
+    Matter.World.add(world, body);
   }
 
   function cycleGravity() {
