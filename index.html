@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>"Apple"</title>
+<title>: apple</title>
 <style>
   body {
     margin: 0;
@@ -18,11 +18,12 @@
     left: 60px;
     font-size: 24px;
     font-weight: bold;
+    white-space: pre;
   }
 
   #description {
     position: absolute;
-    top: 155px;
+    top: 165px;
     left: 60px;
     white-space: pre-line;
     line-height: 1.5em;
@@ -34,7 +35,7 @@
     left: 60px;
     right: 60px;
     bottom: 100px;
-    border: 1.2pt solid #dbd7d4;
+    border: 0.6pt solid #d1d0cf;
     border-radius: 9px;
     box-shadow: 6px 6px 17px rgba(188, 185, 183, 0.6);
     background-color: #e6e4e3;
@@ -43,29 +44,22 @@
     outline: none;
   }
 
-  .letter, .apple, .temp {
+  /* matter.js가 쓰는 그 실제 캔버스 */
+  #matter-canvas {
     position: absolute;
-    font-family: 'Courier New', monospace;
-    color: #413e3e;
-    user-select: none;
-    letter-spacing: -10px;
+    left: 0;
+    top: 0;
+    image-rendering: pixelated; /* Safari에서 scaling 시 blur 줄이기용, 뒤에서 scale=1이면 크게 영향 없음 */
   }
 
-  .apple {
-    width: 23px;
-    height: 30px;
-  }
-
-  .temp {
-    opacity: 0.5;
-  }
-
-  /* (2) 처음에 커서 숨김 */
   #cursor {
     position: absolute;
     width: 6px;
+    height: 18px;
     background-color: #404e3e;
-    display: none; /* 처음에는 감춤 */
+    display: none;
+    animation: blink 0.8s infinite;
+    pointer-events: none;
   }
 
   @keyframes blink {
@@ -73,7 +67,51 @@
     50.1%, 100% { opacity: 0; }
   }
 
-  /* (1) 지진(흔들림) 효과 */
+  .hint {
+    position: absolute;
+    padding: 6px 10px;
+    border: 1px solid #dbd7d4;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.95);
+    font-size: 12px;
+    color: #413e3e;
+    pointer-events: none;
+    white-space: nowrap;
+    box-shadow: 2px 2px 8px rgba(188,185,183,0.5);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+
+  #typing-preview {
+    position: absolute;
+    left: 0;
+    top: 0;
+    pointer-events: none;
+    font: 16px 'Courier New', monospace;
+    color: #413e3e;
+  }
+
+  .preview-char {
+    position: absolute;
+    font: inherit;
+    color: inherit;
+    user-select: none;
+    line-height: 1;
+  }
+
+  .apple {
+    width: 30px;
+    height: 41px;
+  }
+
+  .title-cursor {
+    display: inline-block;
+    width: 8px;
+    background-color: #413e3e;
+    margin-left: 2px;
+    animation: blink 0.8s infinite;
+  }
+
   @keyframes quake {
     0%   { transform: translate(0, 0); }
     10%  { transform: translate(-2px, 2px); }
@@ -90,284 +128,352 @@
   #typing-area.shake {
     animation: quake 0.45s linear 1;
   }
-
-  /* (3) 커서 클릭 시 뜨는 힌트 */
-  .hint {
-    position: absolute;
-    padding: 6px 10px;
-    border: 1px solid #dbd7d4;
-    border-radius: 6px;
-    background: rgba(255,255,255,0.9);
-    font-size: 12px;
-    color: #413e3e;
-    pointer-events: none;
-    white-space: nowrap;
-    box-shadow: 2px 2px 8px rgba(188,185,183,0.6);
-    opacity: 0;
-    transition: opacity 0.12s ease;
-  }
 </style>
 </head>
 <body>
 
-<div id="title">"Apple"</div>
+<div id="title">": "</div>
 <div id="description">
 This project is inspired by the film 'Inception' and Newton's apple. Press Esc to reset.
 </div>
 
-<div id="typing-area" tabindex="0"></div>
+<div id="typing-area" tabindex="0">
+  <canvas id="matter-canvas"></canvas>
+  <div id="typing-preview"></div>
+</div>
 <div id="cursor"></div>
+<div class="hint" id="hint">Type anywhere + press Enter ⏎</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
 
 <script>
-const typingArea = document.getElementById('typing-area');
-const cursorEl = document.getElementById('cursor');
-let gravity = 'down';
-let elements = [];
-let currentInput = [];
-let cursor = {x: 10, y: 10};
-const letterSize = 18;
-const appleSize = 30;
-const gravityOrder = ['down', 'left', 'up', 'right'];
+// ------------------------------
+// 🍏 Title Typing Animation
+// ------------------------------
+const titleEl = document.getElementById('title');
 
-function updateCursor() {
-  cursorEl.style.left = (typingArea.offsetLeft + cursor.x) + 'px';
-  cursorEl.style.top = (typingArea.offsetTop + cursor.y) + 'px';
-  cursorEl.style.height = letterSize + 'px';
+function wait(ms) {
+  return new Promise(res => setTimeout(res, ms));
 }
 
-typingArea.addEventListener('click', (e) => {
-  const rect = typingArea.getBoundingClientRect();
-  cursor.x = e.clientX - rect.left;
-  cursor.y = e.clientY - rect.top;
-  updateCursor();
-  typingArea.focus();
-  cursorEl.style.animation = "blink 1s step-start infinite";
-  cursorEl.style.display = 'block'; // (2) 클릭 시 커서 보이기
-});
-
-/* (3) 커서 클릭 시 힌트 표시 */
-cursorEl.addEventListener('click', (e) => {
-  e.stopPropagation();
-  const rect = typingArea.getBoundingClientRect();
-  showHint(cursor.x + rect.left + 10, cursor.y + rect.top - 28);
-});
-
-function createTempChar(char, x, y) {
-  const temp = document.createElement('span');
-  temp.className = 'letter temp';
-  temp.textContent = char;
-  temp.style.left = x + 'px';
-  temp.style.top = y + 'px';
-  typingArea.appendChild(temp);
-  return {char, x, y};
-}
-
-// currentWordElements 배열로 그룹화된 입력 글자 요소 생성 함수
-function createLettersGroup(chars) {
-  const group = [];
-  for (const obj of chars) {
-    const el = document.createElement('span');
-    el.className = 'letter';
-    el.textContent = obj.char;
-    el.style.left = obj.x + 'px';
-    el.style.top = obj.y + 'px';
-    typingArea.appendChild(el);
-    group.push({el, type: 'letter'});
-    elements.push(group[group.length - 1]);
+async function blinkCursor(times = 2, after = '') {
+  for (let i = 0; i < times; i++) {
+    titleEl.innerHTML = `:${after}<span class="title-cursor"></span>`;
+    await wait(300);
+    titleEl.innerHTML = `:${after}`;
+    await wait(300);
   }
-  return group;
 }
 
-function createAppleAt(x, y) {
-  const el = document.createElement('img');
-  el.src = 'apple.png';
-  el.className = 'apple';
-  el.style.left = x + 'px';
-  el.style.top = y + 'px';
-  typingArea.appendChild(el);
-  elements.push({el, type:'apple'});
-  moveElement(el, 'apple');
+async function typeTitleLoop() {
+  while (true) {
+    titleEl.textContent = ':';
+    await blinkCursor(2);
+
+    const text = ' apple';
+    for (let i = 0; i < text.length; i++) {
+      titleEl.textContent = ':' + text.slice(0, i + 1);
+      await wait(150);
+    }
+
+    await blinkCursor(2, ' apple');
+  }
 }
+typeTitleLoop();
 
-// 오른쪽 중력일 때 그룹 글자 동시에 오른쪽 이동
-function moveLettersGroupRight(group) {
-  const area = typingArea.getBoundingClientRect();
-  const size = letterSize;
-  let moved = false;
+// ------------------------------
+// 🍎 Matter.js / typing logic
+// ------------------------------
+(() => {
+  const { Engine, Render, Runner, World, Bodies, Composite, Events } = Matter;
 
-  for (let obj of group) {
-    let left = parseFloat(obj.el.style.left);
-    let top = parseFloat(obj.el.style.top);
+  const typingArea   = document.getElementById('typing-area');
+  const cursorEl     = document.getElementById('cursor');
+  const hintEl       = document.getElementById('hint');
+  const previewLayer = document.getElementById('typing-preview');
+  const canvasEl     = document.getElementById('matter-canvas');
 
-    function isBlocked(nextX, nextY, selfEl) {
-      for (let other of elements) {
-        if (other.el === selfEl) continue;
-        const ox = parseFloat(other.el.style.left);
-        const oy = parseFloat(other.el.style.top);
-        const osize = other.type === 'letter' ? letterSize : appleSize;
-        if (nextX < ox + osize && nextX + size > ox &&
-            nextY < oy + osize && nextY + size > oy) {
-          return true;
+  // ---------------------------
+  // (2) HiDPI fix (sharp text, sharp sprite)
+  // ---------------------------
+  // 우리는 Matter.Render가 쓰는 canvas의 내부 픽셀 해상도를 devicePixelRatio에 맞춰서 올리고
+  // CSS 크기는 그대로 유지하게 할 거야.
+  const pixelRatio = window.devicePixelRatio || 1;
+
+  const Wcss = typingArea.clientWidth;
+  const Hcss = typingArea.clientHeight;
+
+  // Matter.Render.create에 넘겨줄 width/height는 "논리 좌표계 크기" 그대로 유지 (Wcss/Hcss)
+  // 대신 아래에서 실제 canvas 해상도를 수동으로 scale업하고 그걸 context.scale로 반영해
+  const engine = Engine.create();
+  const world = engine.world;
+
+  const render = Render.create({
+    element: typingArea,
+    engine,
+    canvas: canvasEl,
+    options: {
+      width: Wcss,
+      height: Hcss,
+      pixelRatio: pixelRatio, // Matter 0.19.0은 pixelRatio 옵션 지원함
+      wireframes: false,
+      background: 'transparent'
+    }
+  });
+
+  // 안전하게 한 번 더 보장: (일부 브라우저에서 pixelRatio 옵션이 불완전할 수 있으므로)
+  // 실제 캔버스 픽셀 크기를 강제로 조정
+  canvasEl.width  = Wcss * pixelRatio;
+  canvasEl.height = Hcss * pixelRatio;
+  canvasEl.style.width  = Wcss + 'px';
+  canvasEl.style.height = Hcss + 'px';
+
+  // 렌더링 컨텍스트에도 스케일 적용
+  const baseGetContext = render.context;
+  baseGetContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+
+  Render.run(render);
+  const runner = Runner.create();
+  Runner.run(runner, engine);
+
+  // 벽
+  const walls = [
+    Bodies.rectangle(Wcss/2, Hcss+10, Wcss, 20, { isStatic: true, render: { visible: false } }),
+    Bodies.rectangle(Wcss/2, -10,     Wcss, 20, { isStatic: true, render: { visible: false } }),
+    Bodies.rectangle(-10,   Hcss/2,   20,   Hcss, { isStatic: true, render: { visible: false } }),
+    Bodies.rectangle(Wcss+10,Hcss/2,  20,   Hcss, { isStatic: true, render: { visible: false } })
+  ];
+  World.add(world, walls);
+
+  const gravities = [
+    {x: 0,  y: 1},
+    {x: -1, y: 0},
+    {x: 0,  y: -1},
+    {x: 1,  y: 0},
+  ];
+  let gIndex = 0;
+  engine.gravity.x = gravities[gIndex].x;
+  engine.gravity.y = gravities[gIndex].y;
+  engine.gravity.scale = 0.001;
+
+  // ---------------------------
+  // (1) 커서/문자 정렬 정확도 개선
+  // ---------------------------
+  // 핵심 아이디어:
+  // - 고정폭 폰트에서 실제 글자 폭을 측정해서 그걸 charAdvance로 사용
+  // - cursorX는 "다음 글자가 들어갈 칼럼 index"만 저장
+  //   => 실제 px 위치 = startX + columnIndex * charAdvance
+  // - previewChars도 columnIndex 기준으로 렌더
+  //
+  // 이렇게 하면 커서 이동, backspace, preview 전부 똑같은 수학을 쓰므로 안 틀어진다.
+
+  // 1) 글자 폭 측정
+  const measureProbe = document.createElement('span');
+  measureProbe.style.position = 'absolute';
+  measureProbe.style.visibility = 'hidden';
+  measureProbe.style.font = "16px 'Courier New', monospace";
+  measureProbe.style.lineHeight = '1';
+  measureProbe.textContent = 'M'; // 고정폭이라 아무 글자나 됨
+  document.body.appendChild(measureProbe);
+  const charAdvance = measureProbe.getBoundingClientRect().width;
+  const charHeight  = measureProbe.getBoundingClientRect().height;
+  document.body.removeChild(measureProbe);
+
+  // 커서 "한 줄 시작점" 좌표
+  let caretBaseX = Wcss / 2;
+  let caretBaseY = Hcss / 2;
+
+  // caretCol은 현재 몇 번째 칸인지 (정수)
+  let caretCol = 0;
+
+  // 상태
+  let active = false;
+  let buffer = "";
+  let previewChars = [];
+
+  function logicalToScreenX(col) {
+    return caretBaseX + col * charAdvance;
+  }
+  function logicalToScreenY() {
+    // 살짝 위로 맞추던 기존 -10 보정 대신 실제 텍스트 baseline 근처로
+    return caretBaseY - (charHeight * 0.6);
+  }
+
+  function updateCursor() {
+    const rect = typingArea.getBoundingClientRect();
+    const screenX = logicalToScreenX(caretCol);
+    const screenY = caretBaseY;
+
+    cursorEl.style.left = (rect.left + screenX - 2) + 'px';
+    cursorEl.style.top  = (rect.top  + screenY - (charHeight * 0.7)) + 'px';
+  }
+
+  function clearPreview() {
+    previewChars.forEach(n => n.remove());
+    previewChars = [];
+  }
+
+  function redrawPreview() {
+    clearPreview();
+    for (let i = 0; i < buffer.length; i++) {
+      const span = document.createElement('span');
+      span.className = 'preview-char';
+      span.textContent = buffer[i];
+      span.style.left = logicalToScreenX(i) + 'px';
+      span.style.top  = logicalToScreenY()  + 'px';
+      previewLayer.appendChild(span);
+      previewChars.push(span);
+    }
+  }
+
+  function quake() {
+    typingArea.classList.remove('shake');
+    void typingArea.offsetWidth; // reflow to restart animation
+    typingArea.classList.add('shake');
+    setTimeout(() => typingArea.classList.remove('shake'), 500);
+  }
+
+  function commitBufferAsBodies(text) {
+    // buffer의 각 글자를 물리 바디로 생성
+    for (let i = 0; i < text.length; i++) {
+      const bodyX = logicalToScreenX(i);
+      const bodyY = caretBaseY;
+      const body = Bodies.circle(bodyX, bodyY, 8, {
+        restitution: 0.2,
+        friction: 0.2,
+        frictionAir: 0.01,
+        render: { opacity: 0 }, // 텍스트는 afterRender에서 그림
+        label: `char:${text[i]}`
+      });
+      World.add(world, body);
+    }
+  }
+
+  function createAppleSprite() {
+    // apple 이미지도 HiDPI에서 날카롭게 보이게 하려면
+    // 실제 physics body 크기와 sprite scale을 1:1로 맞춰줘.
+    // (이미지 자체도 해상도 큰 걸 쓰는 게 이상적이긴 함)
+    const w = 30;
+    const h = 41;
+    const bodyX = logicalToScreenX(0);
+    const bodyY = caretBaseY;
+  
+    const body = Matter.Bodies.rectangle(bodyX, bodyY, w, h, {
+      restitution: 0.2,
+      friction: 0.2,
+      frictionAir: 0.01,
+      render: {
+        sprite: {
+          texture: "apple.png",
+          xScale: w / 300,  // 원본이 300px일 때 → 0.1
+          yScale: h / 410   // 원본이 410px일 때 → 0.1
         }
-      }
-      return false;
-    }
-
-    if (left + size + 2 <= area.width && !isBlocked(left + 2, top, obj.el)) {
-      obj.el.style.left = (left + 2) + 'px';
-      moved = true;
-    }
+      },
+      label: "apple"
+    });
+  
+    Matter.World.add(world, body);
   }
 
-  if (moved) {
-    requestAnimationFrame(() => moveLettersGroupRight(group));
-  }
-}
-
-function moveElement(el, type) {
-  const area = typingArea.getBoundingClientRect();
-  let top = parseFloat(el.style.top);
-  let left = parseFloat(el.style.left);
-  const size = type === 'letter' ? letterSize : appleSize;
-
-  function isBlocked(nextX, nextY) {
-    for (let obj of elements) {
-      if (obj.el === el) continue;
-      const ox = parseFloat(obj.el.style.left);
-      const oy = parseFloat(obj.el.style.top);
-      const osize = obj.type === 'letter' ? letterSize : appleSize;
-      if (nextX < ox + osize && nextX + size > ox &&
-          nextY < oy + osize && nextY + size > oy) {
-        return true;
-      }
-    }
-    return false;
+  function cycleGravity() {
+    gIndex = (gIndex + 1) % gravities.length;
+    engine.gravity.x = gravities[gIndex].x;
+    engine.gravity.y = gravities[gIndex].y;
   }
 
-  function step() {
-    let moved = false;
-    if (gravity === 'down') {
-      if (top + size + 2 <= area.height && !isBlocked(left, top+2)) {
-        top += 2; moved = true;
-      } else if (type === 'apple') {
-        quake();           // ⬅️ 추가: 아래쪽에서 멈춰도 지진
-        rotateGravity();
-      }
-    } else if (gravity === 'left') {
-      if (left - 2 >= 0 && !isBlocked(left-2, top)) {
-        left -= 2; moved = true;
-      } else if (type === 'apple') {
-        quake();           // ⬅️ 추가: 왼쪽에서 멈춰도 지진
-        rotateGravity();
-      }
-    } else if (gravity === 'up') {
-      if (top - 2 >= 0 && !isBlocked(left, top-2)) {
-        top -= 2; moved = true;
-      } else if (type === 'apple') {
-        quake();           // ⬅️ 추가: 위쪽에서 멈춰도 지진
-        rotateGravity();
-      }
-    } else if (gravity === 'right') {
-      if (type === 'apple') {
-        if (left + size + 2 <= area.width && !isBlocked(left + 2, top)) {
-          left += 2; moved = true;
-        } else {
-          quake();         // ⬅️ 추가: 오른쪽에서 멈춰도 지진
-          rotateGravity();
-        }
-      }
-      // letter 타입 개별 이동은 여기서 처리하지 않음
-    }
-    el.style.top = top + 'px';
-    el.style.left = left + 'px';
-    if (moved) requestAnimationFrame(step);
-  }
-  step();
-}
+  // 클릭해서 캐럿 기준점 재설정
+  typingArea.addEventListener('click', (e) => {
+    const rect = typingArea.getBoundingClientRect();
+    caretBaseX = e.clientX - rect.left;
+    caretBaseY = e.clientY - rect.top;
 
-function rotateGravity() {
-  gravity = gravityOrder[(gravityOrder.indexOf(gravity) + 1) % 4];
-}
+    caretCol = 0;
+    buffer = "";
+    redrawPreview();
 
-/* (1) 지진(흔들림) 트리거 */
-function quake() {
-  typingArea.classList.remove('shake'); // 연속 트리거 대비 초기화
-  // reflow로 애니메이션 재시작 보장
-  void typingArea.offsetWidth;
-  typingArea.classList.add('shake');
-  setTimeout(() => typingArea.classList.remove('shake'), 500);
-}
-
-/* (3) 힌트 표시 유틸 */
-function showHint(pageX, pageY) {
-  const hint = document.createElement('div');
-  hint.className = 'hint';
-  hint.textContent = 'type anywhere ↵';
-  document.body.appendChild(hint);
-  hint.style.left = (pageX) + 'px';
-  hint.style.top = (pageY) + 'px';
-  requestAnimationFrame(() => { hint.style.opacity = '1'; });
-  setTimeout(() => {
-    hint.style.opacity = '0';
-    setTimeout(() => hint.remove(), 150);
-  }, 900);
-}
-
-typingArea.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    elements.forEach(o => o.el.remove());
-    elements = [];
-    currentInput = [];
-    cursor.x = 10;
-    cursor.y = 10;
-    gravity = 'down';
-    const temps = typingArea.querySelectorAll('.temp');
-    temps.forEach(t => t.remove());
+    cursorEl.style.display = 'block';
+    active = true;
+    typingArea.focus();
     updateCursor();
-  } else if (e.key === 'Enter') {
-    if(currentInput.length === 0) return;
-    let word = currentInput.map(c => c.char).join('');
-    if (word.toLowerCase() === 'apple') {
-      createAppleAt(currentInput[0].x, currentInput[0].y);
-    } else {
-      // 그룹으로 글자 생성
-      const group = createLettersGroup(currentInput);
-      if (gravity === 'right') {
-        moveLettersGroupRight(group);
-      } else {
-        // 오른쪽 중력이 아니면 개별 이동 실행
-        group.forEach(obj => moveElement(obj.el, 'letter'));
-      }
+  });
+
+  typingArea.addEventListener('dblclick', (e) => {
+    hintEl.style.left = (e.pageX + 10) + 'px';
+    hintEl.style.top  = (e.pageY - 20) + 'px';
+    hintEl.style.opacity = 1;
+    setTimeout(() => hintEl.style.opacity = 0, 1200);
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (!active) return;
+
+    if (e.key === 'Escape') {
+      location.reload();
+      return;
     }
-    currentInput = [];
-    const temps = typingArea.querySelectorAll('.temp');
-    temps.forEach(t => t.remove());
-  } else if (e.key === 'Backspace') {
-    if (currentInput.length > 0) {
-      currentInput.pop();
-      const spans = typingArea.querySelectorAll('.temp');
-      if (spans.length > 0) spans[spans.length -1].remove();
-      if (currentInput.length > 0) {
-        cursor.x = currentInput[currentInput.length -1].x + letterSize;
-        cursor.y = currentInput[currentInput.length -1].y;
+
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (!buffer.trim()) return;
+
+      if (buffer.toLowerCase() === 'apple') {
+        createAppleSprite();
+        quake();
+        cycleGravity();
+      } else {
+        commitBufferAsBodies(buffer);
       }
-      else {
-        cursor.x = 10;
-        cursor.y = 10;
+
+      buffer = "";
+      caretCol = 0;
+      redrawPreview();
+      updateCursor();
+      return;
+    }
+
+    if (e.key === 'Backspace') {
+      e.preventDefault();
+      if (buffer.length > 0) {
+        buffer = buffer.slice(0, -1);
+        caretCol = buffer.length;
+        redrawPreview();
+        updateCursor();
       }
+      return;
+    }
+
+    // 일반 글자 (한 글자짜리 key만 받는다)
+    if (e.key.length === 1) {
+      buffer += e.key;
+      caretCol = buffer.length;
+      redrawPreview();
       updateCursor();
     }
-  } else if (e.key.length === 1) {
-    const tempChar = createTempChar(e.key, cursor.x, cursor.y);
-    currentInput.push(tempChar);
-    cursor.x += letterSize;
-    updateCursor();
-  }
-});
+  });
 
-updateCursor();
-typingArea.focus();
+  // Matter.js 이후 텍스트 드로잉
+  Events.on(render, 'afterRender', () => {
+    const ctx = render.context;
+    ctx.save();
+
+    // HiDPI 대응: 이미 위에서 context.scale(pixelRatio...)을 해줬으므로
+    // 여기선 그냥 px 단위로 그리면 선명하게 찍힌다.
+    ctx.font = "16px 'Courier New', monospace";
+    ctx.fillStyle = '#413e3e';
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center';
+
+    const bodies = Composite.allBodies(world);
+    for (const b of bodies) {
+      if (!b.label || !b.label.startsWith('char:')) continue;
+      const char = b.label.slice(5);
+      const p = b.position;
+      ctx.fillText(char, p.x, p.y + 1); // 약간 아래 보정
+    }
+
+    ctx.restore();
+  });
+})();
 </script>
-
 </body>
 </html>
