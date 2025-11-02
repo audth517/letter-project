@@ -4,11 +4,23 @@
 <meta charset="UTF-8" />
 <title>: apple</title>
 <style>
+  /* -------------------------------
+     ✅ 한글 전용 Gmarket Sans Light 폰트 선언
+     ------------------------------- */
+  @font-face {
+    font-family: 'GmarketSansLight';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansTTFLight.woff') format('woff');
+    font-weight: 300;
+    font-style: normal;
+    unicode-range: U+AC00-D7A3; /* 한글 전용 */
+  }
+
   body {
     margin: 0;
     padding: 0;
     background-color: #e6e4e3;
-    font-family: 'Courier New', monospace;
+    /* 영어: Courier New / 한글: Gmarket Sans */
+    font-family: 'Courier New', 'GmarketSansLight', monospace;
     color: #413e3e;
   }
 
@@ -27,6 +39,7 @@
     left: 60px;
     white-space: pre-line;
     line-height: 1.5em;
+    font-family: 'Courier New', 'GmarketSansLight', monospace;
   }
 
   #typing-area {
@@ -42,14 +55,14 @@
     overflow: hidden;
     cursor: text;
     outline: none;
+    font-family: 'Courier New', 'GmarketSansLight', monospace;
   }
 
-  /* matter.js가 쓰는 그 실제 캔버스 */
   #matter-canvas {
     position: absolute;
     left: 0;
     top: 0;
-    image-rendering: pixelated; /* Safari에서 scaling 시 blur 줄이기용, 뒤에서 scale=1이면 크게 영향 없음 */
+    image-rendering: pixelated;
   }
 
   #cursor {
@@ -80,21 +93,14 @@
     box-shadow: 2px 2px 8px rgba(188,185,183,0.5);
     opacity: 0;
     transition: opacity 0.15s ease;
+    font-family: 'Courier New', 'GmarketSansLight', monospace;
   }
 
-  #typing-preview {
-    position: absolute;
-    left: 0;
-    top: 0;
-    pointer-events: none;
-    font: 16px 'Courier New', monospace;
-    color: #413e3e;
-  }
-
+  #typing-preview,
   .preview-char {
     position: absolute;
-    font: inherit;
-    color: inherit;
+    font: 16px 'Courier New', 'GmarketSansLight', monospace;
+    color: #413e3e;
     user-select: none;
     line-height: 1;
   }
@@ -134,7 +140,9 @@
 
 <div id="title">": "</div>
 <div id="description">
-This project is inspired by the film 'Inception' and Newton's apple. Press Esc to reset.
+This project is inspired by the film 'Inception' and Newton's apple.  
+Press Esc to reset.  
+한글도 이렇게 잘 보입니다.
 </div>
 
 <div id="typing-area" tabindex="0">
@@ -145,332 +153,220 @@ This project is inspired by the film 'Inception' and Newton's apple. Press Esc t
 <div class="hint" id="hint">Type anywhere + press Enter ⏎</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
-
 <script>
-// ------------------------------
-// 🍏 Title Typing Animation
-// ------------------------------
 const titleEl = document.getElementById('title');
+function wait(ms){return new Promise(res=>setTimeout(res,ms));}
 
-function wait(ms) {
-  return new Promise(res => setTimeout(res, ms));
-}
-
-async function blinkCursor(times = 2, after = '') {
-  for (let i = 0; i < times; i++) {
-    titleEl.innerHTML = `:${after}<span class="title-cursor"></span>`;
+async function blinkCursor(times=2,after=''){
+  for(let i=0;i<times;i++){
+    titleEl.innerHTML=`:${after}<span class="title-cursor"></span>`;
     await wait(300);
-    titleEl.innerHTML = `:${after}`;
+    titleEl.innerHTML=`:${after}`;
     await wait(300);
   }
 }
-
-async function typeTitleLoop() {
-  while (true) {
-    titleEl.textContent = ':';
+async function typeTitleLoop(){
+  while(true){
+    titleEl.textContent=':';
     await blinkCursor(2);
-
-    const text = ' apple';
-    for (let i = 0; i < text.length; i++) {
-      titleEl.textContent = ':' + text.slice(0, i + 1);
+    const text=' apple';
+    for(let i=0;i<text.length;i++){
+      titleEl.textContent=':'+text.slice(0,i+1);
       await wait(150);
     }
-
-    await blinkCursor(2, ' apple');
+    await blinkCursor(2,' apple');
   }
 }
 typeTitleLoop();
 
-// ------------------------------
-// 🍎 Matter.js / typing logic
-// ------------------------------
 (() => {
   const { Engine, Render, Runner, World, Bodies, Composite, Events } = Matter;
+  const typingArea=document.getElementById('typing-area');
+  const cursorEl=document.getElementById('cursor');
+  const hintEl=document.getElementById('hint');
+  const previewLayer=document.getElementById('typing-preview');
+  const canvasEl=document.getElementById('matter-canvas');
 
-  const typingArea   = document.getElementById('typing-area');
-  const cursorEl     = document.getElementById('cursor');
-  const hintEl       = document.getElementById('hint');
-  const previewLayer = document.getElementById('typing-preview');
-  const canvasEl     = document.getElementById('matter-canvas');
+  const pixelRatio=window.devicePixelRatio||1;
+  const Wcss=typingArea.clientWidth;
+  const Hcss=typingArea.clientHeight;
 
-  // ---------------------------
-  // (2) HiDPI fix (sharp text, sharp sprite)
-  // ---------------------------
-  // 우리는 Matter.Render가 쓰는 canvas의 내부 픽셀 해상도를 devicePixelRatio에 맞춰서 올리고
-  // CSS 크기는 그대로 유지하게 할 거야.
-  const pixelRatio = window.devicePixelRatio || 1;
+  const engine=Engine.create();
+  const world=engine.world;
 
-  const Wcss = typingArea.clientWidth;
-  const Hcss = typingArea.clientHeight;
-
-  // Matter.Render.create에 넘겨줄 width/height는 "논리 좌표계 크기" 그대로 유지 (Wcss/Hcss)
-  // 대신 아래에서 실제 canvas 해상도를 수동으로 scale업하고 그걸 context.scale로 반영해
-  const engine = Engine.create();
-  const world = engine.world;
-
-  const render = Render.create({
-    element: typingArea,
-    engine,
-    canvas: canvasEl,
-    options: {
-      width: Wcss,
-      height: Hcss,
-      pixelRatio: pixelRatio, // Matter 0.19.0은 pixelRatio 옵션 지원함
-      wireframes: false,
-      background: 'transparent'
+  const render=Render.create({
+    element:typingArea,engine,canvas:canvasEl,
+    options:{
+      width:Wcss,height:Hcss,pixelRatio:pixelRatio,
+      wireframes:false,background:'transparent'
     }
   });
-
-  // 안전하게 한 번 더 보장: (일부 브라우저에서 pixelRatio 옵션이 불완전할 수 있으므로)
-  // 실제 캔버스 픽셀 크기를 강제로 조정
-  canvasEl.width  = Wcss * pixelRatio;
-  canvasEl.height = Hcss * pixelRatio;
-  canvasEl.style.width  = Wcss + 'px';
-  canvasEl.style.height = Hcss + 'px';
-
-  // 렌더링 컨텍스트에도 스케일 적용
-  const baseGetContext = render.context;
-  baseGetContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-
+  canvasEl.width=Wcss*pixelRatio;
+  canvasEl.height=Hcss*pixelRatio;
+  canvasEl.style.width=Wcss+'px';
+  canvasEl.style.height=Hcss+'px';
+  render.context.setTransform(pixelRatio,0,0,pixelRatio,0,0);
   Render.run(render);
-  const runner = Runner.create();
-  Runner.run(runner, engine);
+  const runner=Runner.create();
+  Runner.run(runner,engine);
 
-  // 벽
-  const walls = [
-    Bodies.rectangle(Wcss/2, Hcss+10, Wcss, 20, { isStatic: true, render: { visible: false } }),
-    Bodies.rectangle(Wcss/2, -10,     Wcss, 20, { isStatic: true, render: { visible: false } }),
-    Bodies.rectangle(-10,   Hcss/2,   20,   Hcss, { isStatic: true, render: { visible: false } }),
-    Bodies.rectangle(Wcss+10,Hcss/2,  20,   Hcss, { isStatic: true, render: { visible: false } })
+  const walls=[
+    Bodies.rectangle(Wcss/2,Hcss+10,Wcss,20,{isStatic:true,render:{visible:false}}),
+    Bodies.rectangle(Wcss/2,-10,Wcss,20,{isStatic:true,render:{visible:false}}),
+    Bodies.rectangle(-10,Hcss/2,20,Hcss,{isStatic:true,render:{visible:false}}),
+    Bodies.rectangle(Wcss+10,Hcss/2,20,Hcss,{isStatic:true,render:{visible:false}})
   ];
-  World.add(world, walls);
+  World.add(world,walls);
 
-  const gravities = [
-    {x: 0,  y: 1},
-    {x: -1, y: 0},
-    {x: 0,  y: -1},
-    {x: 1,  y: 0},
+  const gravities=[
+    {x:0,y:1},{x:-1,y:0},{x:0,y:-1},{x:1,y:0},
   ];
-  let gIndex = 0;
-  engine.gravity.x = gravities[gIndex].x;
-  engine.gravity.y = gravities[gIndex].y;
-  engine.gravity.scale = 0.001;
+  let gIndex=0;
+  engine.gravity.x=gravities[gIndex].x;
+  engine.gravity.y=gravities[gIndex].y;
+  engine.gravity.scale=0.001;
 
-  // ---------------------------
-  // (1) 커서/문자 정렬 정확도 개선
-  // ---------------------------
-  // 핵심 아이디어:
-  // - 고정폭 폰트에서 실제 글자 폭을 측정해서 그걸 charAdvance로 사용
-  // - cursorX는 "다음 글자가 들어갈 칼럼 index"만 저장
-  //   => 실제 px 위치 = startX + columnIndex * charAdvance
-  // - previewChars도 columnIndex 기준으로 렌더
-  //
-  // 이렇게 하면 커서 이동, backspace, preview 전부 똑같은 수학을 쓰므로 안 틀어진다.
-
-  // 1) 글자 폭 측정
-  const measureProbe = document.createElement('span');
-  measureProbe.style.position = 'absolute';
-  measureProbe.style.visibility = 'hidden';
-  measureProbe.style.font = "16px 'Courier New', monospace";
-  measureProbe.style.lineHeight = '1';
-  measureProbe.textContent = 'M'; // 고정폭이라 아무 글자나 됨
+  const measureProbe=document.createElement('span');
+  measureProbe.style.position='absolute';
+  measureProbe.style.visibility='hidden';
+  measureProbe.style.font="16px 'Courier New','GmarketSansLight',monospace";
+  measureProbe.textContent='M';
   document.body.appendChild(measureProbe);
-  const charAdvance = measureProbe.getBoundingClientRect().width;
-  const charHeight  = measureProbe.getBoundingClientRect().height;
+  const charAdvance=measureProbe.getBoundingClientRect().width;
+  const charHeight=measureProbe.getBoundingClientRect().height;
   document.body.removeChild(measureProbe);
 
-  // 커서 "한 줄 시작점" 좌표
-  let caretBaseX = Wcss / 2;
-  let caretBaseY = Hcss / 2;
-
-  // caretCol은 현재 몇 번째 칸인지 (정수)
-  let caretCol = 0;
-
-  // 상태
-  let active = false;
-  let buffer = "";
-  let previewChars = [];
-
-  function logicalToScreenX(col) {
-    return caretBaseX + col * charAdvance;
+  let caretBaseX=Wcss/2,caretBaseY=Hcss/2;
+  let caretCol=0,active=false,buffer="",previewChars=[];
+  function logicalToScreenX(col){return caretBaseX+col*charAdvance;}
+  function logicalToScreenY(){return caretBaseY-(charHeight*0.6);}
+  function updateCursor(){
+    const rect=typingArea.getBoundingClientRect();
+    const screenX=logicalToScreenX(caretCol);
+    const screenY=caretBaseY;
+    cursorEl.style.left=(rect.left+screenX-2)+'px';
+    cursorEl.style.top=(rect.top+screenY-(charHeight*0.7))+'px';
   }
-  function logicalToScreenY() {
-    // 살짝 위로 맞추던 기존 -10 보정 대신 실제 텍스트 baseline 근처로
-    return caretBaseY - (charHeight * 0.6);
-  }
-
-  function updateCursor() {
-    const rect = typingArea.getBoundingClientRect();
-    const screenX = logicalToScreenX(caretCol);
-    const screenY = caretBaseY;
-
-    cursorEl.style.left = (rect.left + screenX - 2) + 'px';
-    cursorEl.style.top  = (rect.top  + screenY - (charHeight * 0.7)) + 'px';
-  }
-
-  function clearPreview() {
-    previewChars.forEach(n => n.remove());
-    previewChars = [];
-  }
-
-  function redrawPreview() {
+  function clearPreview(){previewChars.forEach(n=>n.remove());previewChars=[];}
+  function redrawPreview(){
     clearPreview();
-    for (let i = 0; i < buffer.length; i++) {
-      const span = document.createElement('span');
-      span.className = 'preview-char';
-      span.textContent = buffer[i];
-      span.style.left = logicalToScreenX(i) + 'px';
-      span.style.top  = logicalToScreenY()  + 'px';
+    for(let i=0;i<buffer.length;i++){
+      const span=document.createElement('span');
+      span.className='preview-char';
+      span.textContent=buffer[i];
+      span.style.left=logicalToScreenX(i)+'px';
+      span.style.top=logicalToScreenY()+'px';
       previewLayer.appendChild(span);
       previewChars.push(span);
     }
   }
-
-  function quake() {
-    typingArea.classList.remove('shake');
-    void typingArea.offsetWidth; // reflow to restart animation
+  function quake(){
+    typingArea.classList.remove('shake');void typingArea.offsetWidth;
     typingArea.classList.add('shake');
-    setTimeout(() => typingArea.classList.remove('shake'), 500);
+    setTimeout(()=>typingArea.classList.remove('shake'),500);
   }
-
-  function commitBufferAsBodies(text) {
-    // buffer의 각 글자를 물리 바디로 생성
-    for (let i = 0; i < text.length; i++) {
-      const bodyX = logicalToScreenX(i);
-      const bodyY = caretBaseY;
-      const body = Bodies.circle(bodyX, bodyY, 8, {
-        restitution: 0.2,
-        friction: 0.2,
-        frictionAir: 0.01,
-        render: { opacity: 0 }, // 텍스트는 afterRender에서 그림
-        label: `char:${text[i]}`
+  function commitBufferAsBodies(text){
+    for(let i=0;i<text.length;i++){
+      const bodyX=logicalToScreenX(i);
+      const bodyY=caretBaseY;
+      const body=Bodies.circle(bodyX,bodyY,8,{
+        restitution:0.2,friction:0.2,frictionAir:0.01,
+        render:{opacity:0},label:`char:${text[i]}`
       });
-      World.add(world, body);
+      World.add(world,body);
     }
   }
 
-  function createAppleSprite() {
-    // apple 이미지도 HiDPI에서 날카롭게 보이게 하려면
-    // 실제 physics body 크기와 sprite scale을 1:1로 맞춰줘.
-    // (이미지 자체도 해상도 큰 걸 쓰는 게 이상적이긴 함)
-    const w = 33;
-    const h = 45;
-    const bodyX = logicalToScreenX(0);
-    const bodyY = caretBaseY;
-  
-    const body = Matter.Bodies.rectangle(bodyX, bodyY, w, h, {
-      restitution: 0.2,
-      friction: 0.2,
-      frictionAir: 0.01,
-      render: {
-        sprite: {
-          texture: "apple.png",
-          xScale: w / 834,
-          yScale: h / 1140  
+  function createAppleSprite(){
+    const w=33,h=45;
+    const bodyX=logicalToScreenX(0);
+    const bodyY=caretBaseY;
+    const body=Bodies.rectangle(bodyX,bodyY,w,h,{
+      restitution:0.2,friction:0.2,frictionAir:0.01,
+      render:{
+        sprite:{
+          texture:"apple.png",
+          xScale:w/834,
+          yScale:h/1140
         }
       },
-      label: "apple"
+      label:"apple"
     });
-  
-    Matter.World.add(world, body);
+    World.add(world,body);
   }
 
-  function cycleGravity() {
-    gIndex = (gIndex + 1) % gravities.length;
-    engine.gravity.x = gravities[gIndex].x;
-    engine.gravity.y = gravities[gIndex].y;
+  function cycleGravity(){
+    gIndex=(gIndex+1)%gravities.length;
+    engine.gravity.x=gravities[gIndex].x;
+    engine.gravity.y=gravities[gIndex].y;
   }
 
-  // 클릭해서 캐럿 기준점 재설정
-  typingArea.addEventListener('click', (e) => {
-    const rect = typingArea.getBoundingClientRect();
-    caretBaseX = e.clientX - rect.left;
-    caretBaseY = e.clientY - rect.top;
-
-    caretCol = 0;
-    buffer = "";
+  typingArea.addEventListener('click',(e)=>{
+    const rect=typingArea.getBoundingClientRect();
+    caretBaseX=e.clientX-rect.left;
+    caretBaseY=e.clientY-rect.top;
+    caretCol=0;buffer="";
     redrawPreview();
-
-    cursorEl.style.display = 'block';
-    active = true;
+    cursorEl.style.display='block';
+    active=true;
     typingArea.focus();
     updateCursor();
   });
 
-  typingArea.addEventListener('dblclick', (e) => {
-    hintEl.style.left = (e.pageX + 10) + 'px';
-    hintEl.style.top  = (e.pageY - 20) + 'px';
-    hintEl.style.opacity = 1;
-    setTimeout(() => hintEl.style.opacity = 0, 1200);
+  typingArea.addEventListener('dblclick',(e)=>{
+    hintEl.style.left=(e.pageX+10)+'px';
+    hintEl.style.top=(e.pageY-20)+'px';
+    hintEl.style.opacity=1;
+    setTimeout(()=>hintEl.style.opacity=0,1200);
   });
 
-  document.addEventListener('keydown', (e) => {
-    if (!active) return;
-
-    if (e.key === 'Escape') {
-      location.reload();
-      return;
-    }
-
-    if (e.key === 'Enter') {
+  document.addEventListener('keydown',(e)=>{
+    if(!active)return;
+    if(e.key==='Escape'){location.reload();return;}
+    if(e.key==='Enter'){
       e.preventDefault();
-      if (!buffer.trim()) return;
-
-      if (buffer.toLowerCase() === 'apple') {
+      if(!buffer.trim())return;
+      if(buffer.toLowerCase()==='apple'){
         createAppleSprite();
         quake();
         cycleGravity();
-      } else {
+      }else{
         commitBufferAsBodies(buffer);
       }
-
-      buffer = "";
-      caretCol = 0;
-      redrawPreview();
-      updateCursor();
+      buffer="";caretCol=0;
+      redrawPreview();updateCursor();
       return;
     }
-
-    if (e.key === 'Backspace') {
+    if(e.key==='Backspace'){
       e.preventDefault();
-      if (buffer.length > 0) {
-        buffer = buffer.slice(0, -1);
-        caretCol = buffer.length;
-        redrawPreview();
-        updateCursor();
+      if(buffer.length>0){
+        buffer=buffer.slice(0,-1);
+        caretCol=buffer.length;
+        redrawPreview();updateCursor();
       }
       return;
     }
-
-    // 일반 글자 (한 글자짜리 key만 받는다)
-    if (e.key.length === 1) {
-      buffer += e.key;
-      caretCol = buffer.length;
-      redrawPreview();
-      updateCursor();
+    if(e.key.length===1){
+      buffer+=e.key;
+      caretCol=buffer.length;
+      redrawPreview();updateCursor();
     }
   });
 
-  // Matter.js 이후 텍스트 드로잉
-  Events.on(render, 'afterRender', () => {
-    const ctx = render.context;
+  Events.on(render,'afterRender',()=>{
+    const ctx=render.context;
     ctx.save();
-
-    // HiDPI 대응: 이미 위에서 context.scale(pixelRatio...)을 해줬으므로
-    // 여기선 그냥 px 단위로 그리면 선명하게 찍힌다.
-    ctx.font = "16px 'Courier New', monospace";
-    ctx.fillStyle = '#413e3e';
-    ctx.textBaseline = 'middle';
-    ctx.textAlign = 'center';
-
-    const bodies = Composite.allBodies(world);
-    for (const b of bodies) {
-      if (!b.label || !b.label.startsWith('char:')) continue;
-      const char = b.label.slice(5);
-      const p = b.position;
-      ctx.fillText(char, p.x, p.y + 1); // 약간 아래 보정
+    ctx.font="16px 'Courier New','GmarketSansLight',monospace";
+    ctx.fillStyle='#413e3e';
+    ctx.textBaseline='middle';
+    ctx.textAlign='center';
+    const bodies=Composite.allBodies(world);
+    for(const b of bodies){
+      if(!b.label||!b.label.startsWith('char:'))continue;
+      const char=b.label.slice(5);
+      const p=b.position;
+      ctx.fillText(char,p.x,p.y+1);
     }
-
     ctx.restore();
   });
 })();
