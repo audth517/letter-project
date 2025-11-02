@@ -100,8 +100,8 @@
   }
 
   .apple {
-    width: 30px;
-    height: 41px;
+    width: 33px;
+    height: 45px;
   }
 
   .title-cursor {
@@ -353,8 +353,8 @@ typeTitleLoop();
     // apple 이미지도 HiDPI에서 날카롭게 보이게 하려면
     // 실제 physics body 크기와 sprite scale을 1:1로 맞춰줘.
     // (이미지 자체도 해상도 큰 걸 쓰는 게 이상적이긴 함)
-    const w = 30;
-    const h = 41;
+    const w = 33;
+    const h = 45;
     const bodyX = logicalToScreenX(0);
     const bodyY = caretBaseY;
   
@@ -365,8 +365,8 @@ typeTitleLoop();
       render: {
         sprite: {
           texture: "apple.png",
-          xScale: w / 300,  // 원본이 300px일 때 → 0.1
-          yScale: h / 410   // 원본이 410px일 때 → 0.1
+          xScale: w / 834,
+          yScale: h / 1140  
         }
       },
       label: "apple"
