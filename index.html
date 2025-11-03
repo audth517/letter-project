@@ -37,7 +37,7 @@
     bottom: 100px;
     border: 0.6pt solid #d1d0cf;
     border-radius: 9px;
-    box-shadow: 6px 6px 17px rgba(188, 185, 183, 0.6);
+    box-shadow: 6px 6px 17px rgba(188,185,183,0.6);
     background-color: #e6e4e3;
     overflow: hidden;
     cursor: text;
@@ -64,43 +64,6 @@
   @keyframes blink {
     0%, 50% { opacity: 1; }
     50.1%, 100% { opacity: 0; }
-  }
-
-  .hint {
-    position: absolute;
-    padding: 6px 10px;
-    border: 1px solid #dbd7d4;
-    border-radius: 6px;
-    background: rgba(255,255,255,0.95);
-    font-size: 12px;
-    color: #413e3e;
-    pointer-events: none;
-    white-space: nowrap;
-    box-shadow: 2px 2px 8px rgba(188,185,183,0.5);
-    opacity: 0;
-    transition: opacity 0.15s ease;
-  }
-
-  #typing-preview {
-    position: absolute;
-    left: 0;
-    top: 0;
-    pointer-events: none;
-    font: 16px 'Courier New', monospace;
-    color: #413e3e;
-  }
-
-  .preview-char {
-    position: absolute;
-    font: inherit;
-    color: inherit;
-    user-select: none;
-    line-height: 1;
-  }
-
-  .apple {
-    width: 33px;
-    height: 45px;
   }
 
   .title-cursor {
@@ -151,7 +114,7 @@ This project is inspired by the film 'Inception' and Newton's apple. Press Esc t
 
 <script>
 // ------------------------------
-// 🍏 Title Typing Animation (with moving cursor)
+// 🍏 Title Typing Animation (cursor tracks actual text width)
 // ------------------------------
 const titleEl = document.getElementById('title');
 
@@ -162,33 +125,37 @@ function wait(ms) {
 async function typeTitleLoop() {
   const cursorHTML = `<span class="title-cursor"></span>`;
   const text = ' apple';
-  const charWidth = 13; // Courier New 24px 기준 글자폭
 
   while (true) {
-    // 초기화
     titleEl.innerHTML = ':' + cursorHTML;
     const cursorEl = titleEl.querySelector('.title-cursor');
     await wait(400);
 
-    // 글자 하나씩 타이핑하며 커서 이동
+    // 누적 글자 폭으로 커서 이동
     for (let i = 0; i < text.length; i++) {
       const typed = text.slice(0, i + 1);
       titleEl.innerHTML = `:${typed}${cursorHTML}`;
+      const span = document.createElement('span');
+      span.style.font = '24px Courier New, monospace';
+      span.style.visibility = 'hidden';
+      span.textContent = ':' + typed;
+      document.body.appendChild(span);
+      const width = span.getBoundingClientRect().width;
+      document.body.removeChild(span);
+
       const cursor = titleEl.querySelector('.title-cursor');
-      cursor.style.transform = `translateX(${(i + 1) * charWidth}px)`;
+      cursor.style.transform = `translateX(${width}px)`; // 실제 너비 기반 이동
       await wait(150);
     }
 
-    // 완성 후 깜빡임 반복
+    // 완성 후 깜빡임
+    const cursor = titleEl.querySelector('.title-cursor');
     for (let i = 0; i < 3; i++) {
-      const cursor = titleEl.querySelector('.title-cursor');
       cursor.style.opacity = '0';
       await wait(300);
       cursor.style.opacity = '1';
       await wait(300);
     }
-
-    // 리셋 전 잠시 대기
     await wait(600);
   }
 }
