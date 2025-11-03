@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en>
+<html lang="en">
 <head>
 <meta charset="UTF-8" />
 <title>: apple</title>
@@ -44,12 +44,11 @@
     outline: none;
   }
 
-  /* matter.js가 쓰는 그 실제 캔버스 */
   #matter-canvas {
     position: absolute;
     left: 0;
     top: 0;
-    image-rendering: pixelated; /* Safari에서 scaling 시 blur 줄이기용, 뒤에서 scale=1이면 크게 영향 없음 */
+    image-rendering: pixelated;
   }
 
   #cursor {
@@ -107,9 +106,13 @@
   .title-cursor {
     display: inline-block;
     width: 8px;
+    height: 20px;
     background-color: #413e3e;
     margin-left: 2px;
     animation: blink 0.8s infinite;
+    vertical-align: bottom;
+    transform: translateX(0);
+    transition: transform 0.15s linear;
   }
 
   @keyframes quake {
@@ -148,7 +151,7 @@ This project is inspired by the film 'Inception' and Newton's apple. Press Esc t
 
 <script>
 // ------------------------------
-// 🍏 Title Typing Animation
+// 🍏 Title Typing Animation (with moving cursor)
 // ------------------------------
 const titleEl = document.getElementById('title');
 
@@ -156,62 +159,43 @@ function wait(ms) {
   return new Promise(res => setTimeout(res, ms));
 }
 
-async function blinkCursor(times = 2, after = '') {
-  for (let i = 0; i < times; i++) {
-    titleEl.innerHTML = `:${after}<span class="title-cursor"></span>`;
-    await wait(300);
-    titleEl.innerHTML = `:${after}`;
-    await wait(300);
+async function typeTitleLoop() {
+  const cursorHTML = `<span class="title-cursor"></span>`;
+  const text = ' apple';
+  const charWidth = 13; // Courier New 24px 기준 글자폭
+
+  while (true) {
+    // 초기화
+    titleEl.innerHTML = ':' + cursorHTML;
+    const cursorEl = titleEl.querySelector('.title-cursor');
+    await wait(400);
+
+    // 글자 하나씩 타이핑하며 커서 이동
+    for (let i = 0; i < text.length; i++) {
+      const typed = text.slice(0, i + 1);
+      titleEl.innerHTML = `:${typed}${cursorHTML}`;
+      const cursor = titleEl.querySelector('.title-cursor');
+      cursor.style.transform = `translateX(${(i + 1) * charWidth}px)`;
+      await wait(150);
+    }
+
+    // 완성 후 깜빡임 반복
+    for (let i = 0; i < 3; i++) {
+      const cursor = titleEl.querySelector('.title-cursor');
+      cursor.style.opacity = '0';
+      await wait(300);
+      cursor.style.opacity = '1';
+      await wait(300);
+    }
+
+    // 리셋 전 잠시 대기
+    await wait(600);
   }
 }
-
-async function typeTitleLoop() {
-  const titleEl = document.getElementById('title');
-
-  function wait(ms) {
-    return new Promise(res => setTimeout(res, ms));
-  }
-  
-  async function typeTitleLoop() {
-    const cursorHTML = `<span class="title-cursor"></span>`;
-    const text = ' apple';
-    const charWidth = 12; // Courier New 24px 기준 대략적 글자 폭 (필요시 조정)
-  
-    while (true) {
-      // 초기화
-      titleEl.innerHTML = ':' + cursorHTML;
-      const cursor = titleEl.querySelector('.title-cursor');
-      await wait(400);
-  
-      // 글자 하나씩 타이핑하면서 커서 이동
-      for (let i = 0; i < text.length; i++) {
-        const typed = text.slice(0, i + 1);
-        titleEl.innerHTML = `:${typed}${cursorHTML}`;
-        const cursorEl = titleEl.querySelector('.title-cursor');
-        cursorEl.style.display = 'inline-block';
-        cursorEl.style.transform = `translateX(${(i + 1) * charWidth}px)`; // 커서 이동
-        await wait(150);
-      }
-  
-      // 완성 후 깜빡임 반복
-      for (let i = 0; i < 3; i++) {
-        const typed = text;
-        titleEl.innerHTML = `:${typed}${cursorHTML}`;
-        const cursorEl = titleEl.querySelector('.title-cursor');
-        cursorEl.style.opacity = '0';
-        await wait(300);
-        cursorEl.style.opacity = '1';
-        await wait(300);
-      }
-  
-      // 리셋 전 잠시 대기
-      await wait(600);
-    }
-  }
-  typeTitleLoop();
+typeTitleLoop();
 
 // ------------------------------
-// 🍎 Matter.js / typing logic
+// 🍎 Matter.js / typing logic (기존 그대로 유지)
 // ------------------------------
 (() => {
   const { Engine, Render, Runner, World, Bodies, Composite, Events } = Matter;
@@ -222,18 +206,10 @@ async function typeTitleLoop() {
   const previewLayer = document.getElementById('typing-preview');
   const canvasEl     = document.getElementById('matter-canvas');
 
-  // ---------------------------
-  // (2) HiDPI fix (sharp text, sharp sprite)
-  // ---------------------------
-  // 우리는 Matter.Render가 쓰는 canvas의 내부 픽셀 해상도를 devicePixelRatio에 맞춰서 올리고
-  // CSS 크기는 그대로 유지하게 할 거야.
   const pixelRatio = window.devicePixelRatio || 1;
-
   const Wcss = typingArea.clientWidth;
   const Hcss = typingArea.clientHeight;
 
-  // Matter.Render.create에 넘겨줄 width/height는 "논리 좌표계 크기" 그대로 유지 (Wcss/Hcss)
-  // 대신 아래에서 실제 canvas 해상도를 수동으로 scale업하고 그걸 context.scale로 반영해
   const engine = Engine.create();
   const world = engine.world;
 
@@ -244,28 +220,22 @@ async function typeTitleLoop() {
     options: {
       width: Wcss,
       height: Hcss,
-      pixelRatio: pixelRatio, // Matter 0.19.0은 pixelRatio 옵션 지원함
+      pixelRatio: pixelRatio,
       wireframes: false,
       background: 'transparent'
     }
   });
 
-  // 안전하게 한 번 더 보장: (일부 브라우저에서 pixelRatio 옵션이 불완전할 수 있으므로)
-  // 실제 캔버스 픽셀 크기를 강제로 조정
   canvasEl.width  = Wcss * pixelRatio;
   canvasEl.height = Hcss * pixelRatio;
   canvasEl.style.width  = Wcss + 'px';
   canvasEl.style.height = Hcss + 'px';
-
-  // 렌더링 컨텍스트에도 스케일 적용
-  const baseGetContext = render.context;
-  baseGetContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+  render.context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
 
   Render.run(render);
   const runner = Runner.create();
   Runner.run(runner, engine);
 
-  // 벽
   const walls = [
     Bodies.rectangle(Wcss/2, Hcss+10, Wcss, 20, { isStatic: true, render: { visible: false } }),
     Bodies.rectangle(Wcss/2, -10,     Wcss, 20, { isStatic: true, render: { visible: false } }),
@@ -285,37 +255,19 @@ async function typeTitleLoop() {
   engine.gravity.y = gravities[gIndex].y;
   engine.gravity.scale = 0.001;
 
-  // ---------------------------
-  // (1) 커서/문자 정렬 정확도 개선
-  // ---------------------------
-  // 핵심 아이디어:
-  // - 고정폭 폰트에서 실제 글자 폭을 측정해서 그걸 charAdvance로 사용
-  // - cursorX는 "다음 글자가 들어갈 칼럼 index"만 저장
-  //   => 실제 px 위치 = startX + columnIndex * charAdvance
-  // - previewChars도 columnIndex 기준으로 렌더
-  //
-  // 이렇게 하면 커서 이동, backspace, preview 전부 똑같은 수학을 쓰므로 안 틀어진다.
-
-  // 1) 글자 폭 측정
   const measureProbe = document.createElement('span');
   measureProbe.style.position = 'absolute';
   measureProbe.style.visibility = 'hidden';
   measureProbe.style.font = "16px 'Courier New', monospace";
-  measureProbe.style.lineHeight = '1';
-  measureProbe.textContent = 'M'; // 고정폭이라 아무 글자나 됨
+  measureProbe.textContent = 'M';
   document.body.appendChild(measureProbe);
   const charAdvance = measureProbe.getBoundingClientRect().width;
   const charHeight  = measureProbe.getBoundingClientRect().height;
   document.body.removeChild(measureProbe);
 
-  // 커서 "한 줄 시작점" 좌표
   let caretBaseX = Wcss / 2;
   let caretBaseY = Hcss / 2;
-
-  // caretCol은 현재 몇 번째 칸인지 (정수)
   let caretCol = 0;
-
-  // 상태
   let active = false;
   let buffer = "";
   let previewChars = [];
@@ -324,7 +276,6 @@ async function typeTitleLoop() {
     return caretBaseX + col * charAdvance;
   }
   function logicalToScreenY() {
-    // 살짝 위로 맞추던 기존 -10 보정 대신 실제 텍스트 baseline 근처로
     return caretBaseY - (charHeight * 0.6);
   }
 
@@ -357,13 +308,12 @@ async function typeTitleLoop() {
 
   function quake() {
     typingArea.classList.remove('shake');
-    void typingArea.offsetWidth; // reflow to restart animation
+    void typingArea.offsetWidth;
     typingArea.classList.add('shake');
     setTimeout(() => typingArea.classList.remove('shake'), 500);
   }
 
   function commitBufferAsBodies(text) {
-    // buffer의 각 글자를 물리 바디로 생성
     for (let i = 0; i < text.length; i++) {
       const bodyX = logicalToScreenX(i);
       const bodyY = caretBaseY;
@@ -371,7 +321,7 @@ async function typeTitleLoop() {
         restitution: 0.2,
         friction: 0.2,
         frictionAir: 0.01,
-        render: { opacity: 0 }, // 텍스트는 afterRender에서 그림
+        render: { opacity: 0 },
         label: `char:${text[i]}`
       });
       World.add(world, body);
@@ -379,9 +329,6 @@ async function typeTitleLoop() {
   }
 
   function createAppleSprite() {
-    // apple 이미지도 HiDPI에서 날카롭게 보이게 하려면
-    // 실제 physics body 크기와 sprite scale을 1:1로 맞춰줘.
-    // (이미지 자체도 해상도 큰 걸 쓰는 게 이상적이긴 함)
     const w = 33;
     const h = 45;
     const bodyX = logicalToScreenX(0);
@@ -410,7 +357,6 @@ async function typeTitleLoop() {
     engine.gravity.y = gravities[gIndex].y;
   }
 
-  // 클릭해서 캐럿 기준점 재설정
   typingArea.addEventListener('click', (e) => {
     const rect = typingArea.getBoundingClientRect();
     caretBaseX = e.clientX - rect.left;
@@ -471,7 +417,6 @@ async function typeTitleLoop() {
       return;
     }
 
-    // 일반 글자 (한 글자짜리 key만 받는다)
     if (e.key.length === 1) {
       buffer += e.key;
       caretCol = buffer.length;
@@ -480,26 +425,20 @@ async function typeTitleLoop() {
     }
   });
 
-  // Matter.js 이후 텍스트 드로잉
   Events.on(render, 'afterRender', () => {
     const ctx = render.context;
     ctx.save();
-
-    // HiDPI 대응: 이미 위에서 context.scale(pixelRatio...)을 해줬으므로
-    // 여기선 그냥 px 단위로 그리면 선명하게 찍힌다.
     ctx.font = "16px 'Courier New', monospace";
     ctx.fillStyle = '#413e3e';
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'center';
-
     const bodies = Composite.allBodies(world);
     for (const b of bodies) {
       if (!b.label || !b.label.startsWith('char:')) continue;
       const char = b.label.slice(5);
       const p = b.position;
-      ctx.fillText(char, p.x, p.y + 1); // 약간 아래 보정
+      ctx.fillText(char, p.x, p.y + 1);
     }
-
     ctx.restore();
   });
 })();
