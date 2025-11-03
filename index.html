@@ -166,17 +166,46 @@ async function blinkCursor(times = 2, after = '') {
 }
 
 async function typeTitleLoop() {
-  while (true) {
-    titleEl.textContent = ':';
-    await blinkCursor(2);
+  const titleEl = document.getElementById('title');
 
-    const text = ' apple';
+function wait(ms) {
+  return new Promise(res => setTimeout(res, ms));
+}
+
+async function typeTitleLoop() {
+  const cursorHTML = `<span class="title-cursor"></span>`;
+  const text = ' apple';
+  const charWidth = 12; // Courier New 24px 기준 대략적 글자 폭 (필요시 조정)
+
+  while (true) {
+    // 초기화
+    titleEl.innerHTML = ':' + cursorHTML;
+    const cursor = titleEl.querySelector('.title-cursor');
+    await wait(400);
+
+    // 글자 하나씩 타이핑하면서 커서 이동
     for (let i = 0; i < text.length; i++) {
-      titleEl.textContent = ':' + text.slice(0, i + 1);
+      const typed = text.slice(0, i + 1);
+      titleEl.innerHTML = `:${typed}${cursorHTML}`;
+      const cursorEl = titleEl.querySelector('.title-cursor');
+      cursorEl.style.display = 'inline-block';
+      cursorEl.style.transform = `translateX(${(i + 1) * charWidth}px)`; // 커서 이동
       await wait(150);
     }
 
-    await blinkCursor(2, ' apple');
+    // 완성 후 깜빡임 반복
+    for (let i = 0; i < 3; i++) {
+      const typed = text;
+      titleEl.innerHTML = `:${typed}${cursorHTML}`;
+      const cursorEl = titleEl.querySelector('.title-cursor');
+      cursorEl.style.opacity = '0';
+      await wait(300);
+      cursorEl.style.opacity = '1';
+      await wait(300);
+    }
+
+    // 리셋 전 잠시 대기
+    await wait(600);
   }
 }
 typeTitleLoop();
