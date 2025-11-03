@@ -108,13 +108,12 @@ This project is inspired by the film 'Inception' and Newton's apple. Press Esc t
   <div id="typing-preview"></div>
 </div>
 <div id="cursor"></div>
-<div class="hint" id="hint">Type anywhere + press Enter ⏎</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
 
 <script>
 // ------------------------------
-// 🍏 Title Typing Animation (cursor tracks actual text width)
+// 🍏 Title Typing Animation (cursor moves neatly after each letter)
 // ------------------------------
 const titleEl = document.getElementById('title');
 
@@ -125,51 +124,44 @@ function wait(ms) {
 async function typeTitleLoop() {
   const cursorHTML = `<span class="title-cursor"></span>`;
   const text = ' apple';
-
+  const charWidth = 14; // 글자 간격 조정 (Courier New 24px 기준)
+  
   while (true) {
     titleEl.innerHTML = ':' + cursorHTML;
-    const cursorEl = titleEl.querySelector('.title-cursor');
+    const cursor = titleEl.querySelector('.title-cursor');
     await wait(400);
 
-    // 누적 글자 폭으로 커서 이동
     for (let i = 0; i < text.length; i++) {
       const typed = text.slice(0, i + 1);
       titleEl.innerHTML = `:${typed}${cursorHTML}`;
-      const span = document.createElement('span');
-      span.style.font = '24px Courier New, monospace';
-      span.style.visibility = 'hidden';
-      span.textContent = ':' + typed;
-      document.body.appendChild(span);
-      const width = span.getBoundingClientRect().width;
-      document.body.removeChild(span);
-
-      const cursor = titleEl.querySelector('.title-cursor');
-      cursor.style.transform = `translateX(${width}px)`; // 실제 너비 기반 이동
+      const cursorEl = titleEl.querySelector('.title-cursor');
+      // 글자 옆으로 이동 (한 글자마다 일정 간격)
+      cursorEl.style.transform = `translateX(${i * charWidth}px)`;
       await wait(150);
     }
 
-    // 완성 후 깜빡임
-    const cursor = titleEl.querySelector('.title-cursor');
+    // 깜빡임 유지
     for (let i = 0; i < 3; i++) {
-      cursor.style.opacity = '0';
+      const cursorEl = titleEl.querySelector('.title-cursor');
+      cursorEl.style.opacity = '0';
       await wait(300);
-      cursor.style.opacity = '1';
+      cursorEl.style.opacity = '1';
       await wait(300);
     }
+
     await wait(600);
   }
 }
 typeTitleLoop();
 
 // ------------------------------
-// 🍎 Matter.js / typing logic (기존 그대로 유지)
+// 🍎 Matter.js / typing logic (unchanged)
 // ------------------------------
 (() => {
   const { Engine, Render, Runner, World, Bodies, Composite, Events } = Matter;
 
   const typingArea   = document.getElementById('typing-area');
   const cursorEl     = document.getElementById('cursor');
-  const hintEl       = document.getElementById('hint');
   const previewLayer = document.getElementById('typing-preview');
   const canvasEl     = document.getElementById('matter-canvas');
 
@@ -250,7 +242,6 @@ typeTitleLoop();
     const rect = typingArea.getBoundingClientRect();
     const screenX = logicalToScreenX(caretCol);
     const screenY = caretBaseY;
-
     cursorEl.style.left = (rect.left + screenX - 2) + 'px';
     cursorEl.style.top  = (rect.top  + screenY - (charHeight * 0.7)) + 'px';
   }
@@ -300,7 +291,6 @@ typeTitleLoop();
     const h = 45;
     const bodyX = logicalToScreenX(0);
     const bodyY = caretBaseY;
-  
     const body = Matter.Bodies.rectangle(bodyX, bodyY, w, h, {
       restitution: 0.2,
       friction: 0.2,
@@ -314,7 +304,6 @@ typeTitleLoop();
       },
       label: "apple"
     });
-  
     Matter.World.add(world, body);
   }
 
@@ -328,27 +317,17 @@ typeTitleLoop();
     const rect = typingArea.getBoundingClientRect();
     caretBaseX = e.clientX - rect.left;
     caretBaseY = e.clientY - rect.top;
-
     caretCol = 0;
     buffer = "";
     redrawPreview();
-
     cursorEl.style.display = 'block';
     active = true;
     typingArea.focus();
     updateCursor();
   });
 
-  typingArea.addEventListener('dblclick', (e) => {
-    hintEl.style.left = (e.pageX + 10) + 'px';
-    hintEl.style.top  = (e.pageY - 20) + 'px';
-    hintEl.style.opacity = 1;
-    setTimeout(() => hintEl.style.opacity = 0, 1200);
-  });
-
   document.addEventListener('keydown', (e) => {
     if (!active) return;
-
     if (e.key === 'Escape') {
       location.reload();
       return;
@@ -357,7 +336,6 @@ typeTitleLoop();
     if (e.key === 'Enter') {
       e.preventDefault();
       if (!buffer.trim()) return;
-
       if (buffer.toLowerCase() === 'apple') {
         createAppleSprite();
         quake();
@@ -365,7 +343,6 @@ typeTitleLoop();
       } else {
         commitBufferAsBodies(buffer);
       }
-
       buffer = "";
       caretCol = 0;
       redrawPreview();
