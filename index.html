@@ -339,8 +339,6 @@ typeTitleLoop();
       restitution: 0.2,
       friction: 0.2,
       frictionAir: 0.01,
-      inertia: Infinity,
-      angle: 0,
       label: `textblock:${text}`,
       render: {
         fillStyle: 'transparent', // 몸체는 보이지 않게
@@ -460,8 +458,7 @@ typeTitleLoop();
     const bodies = Composite.allBodies(world);
     for (const b of bodies) {
       if (!b.label || !b.label.startsWith('textblock:')) continue;
-      b.angle = 0;
-      b.angularVelocity = 0;
+
       const text = b.label.slice(10);
       const p = b.position;
     
@@ -469,6 +466,34 @@ typeTitleLoop();
     }
     
     ctx.restore();
+  });
+  
+  Events.on(engine, 'afterUpdate', () => {
+    const bodies = Composite.allBodies(world);
+  
+    for (const b of bodies) {
+      if (!b.label || !b.label.startsWith("textblock:")) continue;
+  
+      // ← 왼쪽 벽
+      if (b.position.x - b.bounds.min.x < 0) {
+        Matter.Body.setPosition(b, { x: b.position.x + 1, y: b.position.y });
+      }
+  
+      // → 오른쪽 벽
+      if (b.position.x + (b.bounds.max.x - b.position.x) > Wcss) {
+        Matter.Body.setPosition(b, { x: b.position.x - 1, y: b.position.y });
+      }
+  
+      // ↑ 위쪽 벽
+      if (b.position.y - b.bounds.min.y < 0) {
+        Matter.Body.setPosition(b, { x: b.position.x, y: b.position.y + 1 });
+      }
+  
+      // ↓ 아래쪽 벽
+      if (b.position.y + (b.bounds.max.y - b.position.y) > Hcss) {
+        Matter.Body.setPosition(b, { x: b.position.x, y: b.position.y - 1 });
+      }
+    }
   });
 })();
 </script>
