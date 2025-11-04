@@ -14,7 +14,7 @@
 
   #title {
     position: absolute;
-    top: 140px;
+    top: 130px;
     left: 60px;
     font-size: 24px;
     font-weight: bold;
@@ -23,7 +23,7 @@
 
   #description {
     position: absolute;
-    top: 165px;
+    top: 150px;
     left: 60px;
     white-space: pre-line;
     line-height: 1.5em;
@@ -301,18 +301,20 @@ typeTitleLoop();
   }
 
   function commitBufferAsBodies(text) {
-    for (let i = 0; i < text.length; i++) {
-      const bodyX = logicalToScreenX(i);
-      const bodyY = caretBaseY;
-      const body = Bodies.circle(bodyX, bodyY, 8, {
-        restitution: 0.2,
-        friction: 0.2,
-        frictionAir: 0.01,
-        render: { opacity: 0 }, 
-        label: `char:${text[i]}`
-      });
-      World.add(world, body);
-    }
+    const width = text.length * charAdvance;
+    const height = charHeight * 1.3;
+  
+    const bodyX = caretBaseX + (width / 2);
+    const bodyY = caretBaseY;
+  
+    const block = Bodies.rectangle(bodyX, bodyY, width, height, {
+      restitution: 0.2,
+      friction: 0.6,
+      frictionAir: 0.01,
+      label: `block:${text}`
+    });
+  
+    World.add(world, block);
   }
 
   function createAppleSprite() {
@@ -338,10 +340,51 @@ typeTitleLoop();
     Matter.World.add(world, body);
   }
 
+  function clampBlocksToWalls() {
+    const bodies = Composite.allBodies(world);
+  
+    for (const b of bodies) {
+      if (!b.label || !b.label.startsWith('block:')) continue;
+  
+      const halfW = b.bounds.max.x - b.position.x;
+      const halfH = b.bounds.max.y - b.position.y;
+  
+      // Left wall
+      if (engine.gravity.x < 0) {
+        if (b.bounds.min.x < 0) {
+          Matter.Body.setPosition(b, { x: halfW + 1, y: b.position.y });
+        }
+      }
+  
+      // Right wall
+      if (engine.gravity.x > 0) {
+        if (b.bounds.max.x > Wcss) {
+          Matter.Body.setPosition(b, { x: Wcss - halfW - 1, y: b.position.y });
+        }
+      }
+  
+      // Up
+      if (engine.gravity.y < 0) {
+        if (b.bounds.min.y < 0) {
+          Matter.Body.setPosition(b, { x: b.position.x, y: halfH + 1 });
+        }
+      }
+  
+      // Down
+      if (engine.gravity.y > 0) {
+        if (b.bounds.max.y > Hcss) {
+          Matter.Body.setPosition(b, { x: b.position.x, y: Hcss - halfH - 1 });
+        }
+      }
+    }
+  }  
+  
   function cycleGravity() {
     gIndex = (gIndex + 1) % gravities.length;
     engine.gravity.x = gravities[gIndex].x;
     engine.gravity.y = gravities[gIndex].y;
+
+    setTimeout(clampBlocksToWalls, 20); //추가
   }
 
   typingArea.addEventListener('click', (e) => {
@@ -425,6 +468,13 @@ typeTitleLoop();
     for (const b of bodies) {
       if (!b.label || !b.label.startsWith('char:')) continue;
       const char = b.label.slice(5);
+      // 추가함(6)
+      for (const b of bodies) {
+        if (!b.label || !b.label.startsWith('block:')) continue;
+        const text = b.label.slice(6);
+        const p = b.position;
+        ctx.fillText(text, p.x, p.y);
+      }
       const p = b.position;
       ctx.fillText(char, p.x, p.y + 1);
     }
