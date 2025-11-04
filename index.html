@@ -311,7 +311,12 @@ typeTitleLoop();
       restitution: 0.2,
       friction: 0.6,
       frictionAir: 0.01,
-      label: `block:${text}`
+      label: `block:${text}`,
+      render: {
+        fillStyle: 'transparent',
+        strokeStyle: 'transparent',
+        lineWidth: 0
+      }
     });
   
     World.add(world, block);
