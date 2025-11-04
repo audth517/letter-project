@@ -220,41 +220,6 @@ typeTitleLoop();
   const runner = Runner.create();
   Runner.run(runner, engine);
 
-  Matter.Events.on(engine, "beforeUpdate", () => {
-    const bodies = Matter.Composite.allBodies(world);
-  
-    for (const b of bodies) {
-      if (!b.label || !b.label.startsWith("chunk:")) continue;
-  
-      const w = b.bounds.max.x - b.bounds.min.x;
-      const h = b.bounds.max.y - b.bounds.min.y;
-  
-      // 왼쪽 벽
-      if (b.position.x - w/2 < 0) {
-        Matter.Body.setPosition(b, { x: w/2, y: b.position.y });
-        Matter.Body.setVelocity(b, { x: Math.abs(b.velocity.x), y: b.velocity.y });
-      }
-  
-      // 오른쪽 벽
-      if (b.position.x + w/2 > Wcss) {
-        Matter.Body.setPosition(b, { x: Wcss - w/2, y: b.position.y });
-        Matter.Body.setVelocity(b, { x: -Math.abs(b.velocity.x), y: b.velocity.y });
-      }
-  
-      // 위쪽 벽
-      if (b.position.y - h/2 < 0) {
-        Matter.Body.setPosition(b, { x: b.position.x, y: h/2 });
-        Matter.Body.setVelocity(b, { x: b.velocity.x, y: Math.abs(b.velocity.y) });
-      }
-  
-      // 아래쪽 벽
-      if (b.position.y + h/2 > Hcss) {
-        Matter.Body.setPosition(b, { x: b.position.x, y: Hcss - h/2 });
-        Matter.Body.setVelocity(b, { x: b.velocity.x, y: -Math.abs(b.velocity.y) });
-      }
-    }
-  });
-
   const walls = [
     Bodies.rectangle(Wcss/2, Hcss+10, Wcss, 20, { isStatic: true, render: { visible: false } }),
     Bodies.rectangle(Wcss/2, -10,     Wcss, 20, { isStatic: true, render: { visible: false } }),
