@@ -228,11 +228,27 @@ typeTitleLoop();
 
   // 벽
   const walls = [
-    Bodies.rectangle(Wcss/2, Hcss+10, Wcss, 20, { isStatic: true, render: { visible: false } }),
-    Bodies.rectangle(Wcss/2, -10,     Wcss, 20, { isStatic: true, render: { visible: false } }),
-    Bodies.rectangle(-10,   Hcss/2,   20,   Hcss, { isStatic: true, render: { visible: false } }),
-    Bodies.rectangle(Wcss+10,Hcss/2,  20,   Hcss, { isStatic: true, render: { visible: false } })
+    Bodies.rectangle(Wcss / 2, Hcss + 50, Wcss + 200, 100, {
+    isStatic: true,
+    render: { visible: false }
+    }),
+  
+    Bodies.rectangle(Wcss / 2, -50, Wcss + 200, 100, {
+      isStatic: true,
+      render: { visible: false }
+    }),
+    
+    Bodies.rectangle(-50, Hcss / 2, 100, Hcss + 200, {
+      isStatic: true,
+      render: { visible: false }
+    }),
+    
+    Bodies.rectangle(Wcss + 50, Hcss / 2, 100, Hcss + 200, {
+      isStatic: true,
+      render: { visible: false }
+    })
   ];
+
   World.add(world, walls);
 
   const gravities = [
