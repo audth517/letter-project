@@ -318,6 +318,10 @@ typeTitleLoop();
     Matter.Body.setInertia(body, Infinity);
     Matter.Body.setAngularVelocity(body, 0);
     Matter.Body.setAngle(body, 0);
+
+    const baseDensity = 0.0015;
+    const adjustedDensity = baseDensity / Math.max(text.length, 1);
+    Matter.Body.setDensity(body, adjustedDensity);
   
     World.add(world, body);
   }
