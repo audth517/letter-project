@@ -237,7 +237,7 @@ typeTitleLoop();
   let gIndex = 0;
   engine.gravity.x = gravities[gIndex].x;
   engine.gravity.y = gravities[gIndex].y;
-  engine.gravity.scale = 0.004;
+  engine.gravity.scale = 0.001;
 
   const measureProbe = document.createElement('span');
   measureProbe.style.position = 'absolute';
@@ -301,29 +301,18 @@ typeTitleLoop();
   }
 
   function commitBufferAsBodies(text) {
-    const width = charAdvance * text.length;
-    const height = charHeight * 1.4; // 여유
-  
-    const bodyX = caretBaseX + width / 2;
-    const bodyY = caretBaseY;
-  
-    const body = Bodies.rectangle(bodyX, bodyY, width, height, {
-      restitution: 0.32,
-      friction: 0.1,
-      frictionAir: 0.002,
-      label: `chunk:${text}`,
-      render: { fillStyle: "transparent", strokeStyle: "transparent" }
-    });
-      
-    Matter.Body.setInertia(body, Infinity);
-    Matter.Body.setAngularVelocity(body, 0);
-    Matter.Body.setAngle(body, 0);
-
-    const baseDensity = 0.0015;
-    const adjustedDensity = baseDensity / Math.max(text.length, 1);
-    Matter.Body.setDensity(body, adjustedDensity);
-  
-    World.add(world, body);
+    for (let i = 0; i < text.length; i++) {
+      const bodyX = logicalToScreenX(i);
+      const bodyY = caretBaseY;
+      const body = Bodies.circle(bodyX, bodyY, 8, {
+        restitution: 0.2,
+        friction: 0.2,
+        frictionAir: 0.01,
+        render: { opacity: 0 }, 
+        label: `char:${text[i]}`
+      });
+      World.add(world, body);
+    }
   }
 
   function createAppleSprite() {
@@ -426,23 +415,20 @@ typeTitleLoop();
   Events.on(render, 'afterRender', () => {
     const ctx = render.context;
     ctx.save();
-  
+
     ctx.font = "16px 'Courier New', monospace";
     ctx.fillStyle = '#413e3e';
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'center';
-  
+
     const bodies = Composite.allBodies(world);
-  
     for (const b of bodies) {
-      if (!b.label || !b.label.startsWith('chunk:')) continue;
-  
-      const text = b.label.slice(6);
+      if (!b.label || !b.label.startsWith('char:')) continue;
+      const char = b.label.slice(5);
       const p = b.position;
-  
-      ctx.fillText(text, p.x, p.y);
+      ctx.fillText(char, p.x, p.y + 1);
     }
-  
+
     ctx.restore();
   });
 
