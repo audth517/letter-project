@@ -251,6 +251,13 @@ typeTitleLoop();
 
   World.add(world, walls);
 
+  const border = Bodies.rectangle(Wcss/2, Hcss/2, Wcss+200, Hcss+200, {
+    isStatic: true,
+    render: { visible: false }
+  });
+  border.isSensor = false; // 충돌 감지 확실하게
+  World.add(world, border);
+
   const gravities = [
     {x: 0,  y: 1},
     {x: -1, y: 0},
@@ -467,6 +474,38 @@ typeTitleLoop();
     
     ctx.restore();
   });
+
+  Events.on(engine, 'beforeUpdate', () => {
+    const bodies = Composite.allBodies(world);
+    for (const b of bodies) {
+      if (!b.label || !b.label.startsWith("textblock:")) continue;
+      b.angle = 0;
+      b.angularVelocity = 0;
+    }
+  });
+
+  Events.on(engine, 'afterUpdate', () => {
+    const bodies = Composite.allBodies(world);
+  
+    for (const b of bodies) {
+      if (!b.label || !b.label.startsWith("textblock:")) continue;
+  
+      // x 경계
+      if (b.position.x < 0) Matter.Body.setPosition(b, {x: 10, y: b.position.y});
+      if (b.position.x > Wcss) Matter.Body.setPosition(b, {x: Wcss-10, y: b.position.y});
+  
+      // y 경계
+      if (b.position.y < 0) Matter.Body.setPosition(b, {x: b.position.x, y: 10});
+      if (b.position.y > Hcss) Matter.Body.setPosition(b, {x: b.position.x, y: Hcss-10});
+  
+      // 순간속도도 줄여줌 (튀는 것 방지)
+      Matter.Body.setVelocity(b, {
+        x: b.velocity.x * 0.6,
+        y: b.velocity.y * 0.6
+      });
+    }
+  });
+  
 })();
 </script>
 </body>
