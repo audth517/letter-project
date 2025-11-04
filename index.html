@@ -301,18 +301,24 @@ typeTitleLoop();
   }
 
   function commitBufferAsBodies(text) {
-    for (let i = 0; i < text.length; i++) {
-      const bodyX = logicalToScreenX(i);
-      const bodyY = caretBaseY;
-      const body = Bodies.circle(bodyX, bodyY, 8, {
-        restitution: 0.2,
-        friction: 0.2,
-        frictionAir: 0.01,
-        render: { opacity: 0 }, 
-        label: `char:${text[i]}`
-      });
-      World.add(world, body);
-    }
+    const width = charAdvance * text.length;
+    const height = charHeight * 1.4; // 여유
+  
+    const bodyX = caretBaseX + width / 2;
+    const bodyY = caretBaseY;
+  
+    const body = Bodies.rectangle(bodyX, bodyY, width, height, {
+      restitution: 0.25,
+      friction: 0.2,
+      frictionAir: 0.01,
+      label: `chunk:${text}`,
+      render: {
+        fillStyle: "transparent",
+        strokeStyle: "transparent"
+      }
+    });
+  
+    World.add(world, body);
   }
 
   function createAppleSprite() {
@@ -415,20 +421,23 @@ typeTitleLoop();
   Events.on(render, 'afterRender', () => {
     const ctx = render.context;
     ctx.save();
-
+  
     ctx.font = "16px 'Courier New', monospace";
     ctx.fillStyle = '#413e3e';
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'center';
-
+  
     const bodies = Composite.allBodies(world);
+  
     for (const b of bodies) {
-      if (!b.label || !b.label.startsWith('char:')) continue;
-      const char = b.label.slice(5);
+      if (!b.label || !b.label.startsWith('chunk:')) continue;
+  
+      const text = b.label.slice(6);
       const p = b.position;
-      ctx.fillText(char, p.x, p.y + 1);
+  
+      ctx.fillText(text, p.x, p.y);
     }
-
+  
     ctx.restore();
   });
 
