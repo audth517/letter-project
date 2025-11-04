@@ -414,7 +414,12 @@ typeTitleLoop();
     setTimeout(() => hintEl.style.opacity = 0, 1200);
   });
 
-  document.addEventListener('keydown', (e) => {
+  window.addEventListener('load', () => {
+    typingArea.focus();
+    active = true;
+  });
+  
+  typingArea.addEventListener('keydown', (e) => {
     if (!active) return;
 
     if (e.key === 'Escape') {
@@ -454,6 +459,18 @@ typeTitleLoop();
 
     if (e.key.length === 1) {
       buffer += e.key;
+      caretCol = buffer.length;
+      redrawPreview();
+      updateCursor();
+    }
+  });
+
+  typingArea.addEventListener('beforeinput', (e) => {
+    if (!active) return;
+  
+    if (e.inputType === 'insertText' && e.data) {
+      e.preventDefault();
+      buffer += e.data;
       caretCol = buffer.length;
       redrawPreview();
       updateCursor();
