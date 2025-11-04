@@ -431,6 +431,39 @@ typeTitleLoop();
 
     ctx.restore();
   });
+
+  window.addEventListener('resize', () => {
+    const newW = typingArea.clientWidth;
+    const newH = typingArea.clientHeight;
+  
+    // 캔버스 리사이징
+    canvasEl.width  = newW * pixelRatio;
+    canvasEl.height = newH * pixelRatio;
+    canvasEl.style.width  = newW + 'px';
+    canvasEl.style.height = newH + 'px';
+  
+    render.options.width  = newW;
+    render.options.height = newH;
+  
+    // 벽 재생성 (기존 벽 제거 후 새로 만들기)
+    Composite.remove(world, walls, true);
+    walls.length = 0;
+  
+    walls.push(
+      Bodies.rectangle(newW/2, newH+10, newW, 20, { isStatic: true, render: { visible: false } }),
+      Bodies.rectangle(newW/2, -10,     newW, 20, { isStatic: true, render: { visible: false } }),
+      Bodies.rectangle(-10,   newH/2,   20,   newH, { isStatic: true, render: { visible: false } }),
+      Bodies.rectangle(newW+10,newH/2,  20,   newH, { isStatic: true, render: { visible: false } })
+    );
+    World.add(world, walls);
+  
+    // caret 중심을 비율로 재조정 (화면 줄여도 중앙 유지)
+    caretBaseX = newW / 2;
+    caretBaseY = newH / 2;
+  
+    redrawPreview();
+    updateCursor();
+  });
 })();
 </script>
 </body>
