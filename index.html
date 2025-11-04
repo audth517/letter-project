@@ -237,7 +237,7 @@ typeTitleLoop();
   let gIndex = 0;
   engine.gravity.x = gravities[gIndex].x;
   engine.gravity.y = gravities[gIndex].y;
-  engine.gravity.scale = 0.001;
+  engine.gravity.scale = 0.004;
 
   const measureProbe = document.createElement('span');
   measureProbe.style.position = 'absolute';
@@ -308,9 +308,9 @@ typeTitleLoop();
     const bodyY = caretBaseY;
   
     const body = Bodies.rectangle(bodyX, bodyY, width, height, {
-      restitution: 0.25,
-      friction: 0.2,
-      frictionAir: 0.01,
+      restitution: 0.32,
+      friction: 0.1,
+      frictionAir: 0.002,
       label: `chunk:${text}`,
       render: { fillStyle: "transparent", strokeStyle: "transparent" }
     });
