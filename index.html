@@ -463,29 +463,32 @@ typeTitleLoop();
   Events.on(render, 'afterRender', () => {
     const ctx = render.context;
     ctx.save();
-
+  
     ctx.font = "16px 'Courier New', monospace";
     ctx.fillStyle = '#413e3e';
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'center';
-
+  
     const bodies = Composite.allBodies(world);
+  
+    // 1) 먼저 block (문장 덩어리) 출력
+    for (const b of bodies) {
+      if (!b.label || !b.label.startsWith('block:')) continue;
+      const text = b.label.slice(6);
+      const p = b.position;
+      ctx.fillText(text, p.x, p.y);
+    }
+  
+    // 2) 그 다음 char (apple 아니고 개별 문자 캐릭터) 출력
     for (const b of bodies) {
       if (!b.label || !b.label.startsWith('char:')) continue;
       const char = b.label.slice(5);
-      // 추가함(6)
-      for (const b of bodies) {
-        if (!b.label || !b.label.startsWith('block:')) continue;
-        const text = b.label.slice(6);
-        const p = b.position;
-        ctx.fillText(text, p.x, p.y);
-      }
       const p = b.position;
       ctx.fillText(char, p.x, p.y + 1);
     }
-
+  
     ctx.restore();
-  });
+  })
 
   window.addEventListener('resize', () => {
     const newW = typingArea.clientWidth;
